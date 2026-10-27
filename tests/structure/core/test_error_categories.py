@@ -403,7 +403,9 @@ MIGRATED_GRAD_DTYPE_USER_BOUNDARIES = {
     # .data can replace storage shape while preserving a recorded producer:
     # validate returned gradient rank and broadcast-compatible extents against
     # that recorded contract. Both are caller-controlled shape boundaries.
-    "src/core/grad.cc": 8,
+    # The optional accumulation order rejects invalid values at assignment
+    # and gradient entry; both are catchable caller configuration errors.
+    "src/core/grad.cc": 10,
 }
 
 

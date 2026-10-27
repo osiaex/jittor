@@ -1,0 +1,86 @@
+{
+  "record_type": "portable copy; historical paths and GPU identifiers replaced only",
+  "new_execution": false,
+  "source": {
+    "lab_relative_path": "_state/trl-completion-20261026/indexing/historical-ppo-pair/fullprint-pair-audit.json",
+    "bytes": 4892,
+    "sha256": "6ca5e537caf2e112b4171484b46ba28827271a6cde48ebe4461eb34949b17b40"
+  },
+  "normalization": "Only path prefixes and historical GPU UUIDs are replaced with placeholders; hashes and numeric observations are historical values.",
+  "result": {
+    "status": "original_719_not_reproduced_or_attributed",
+    "created": 1793010986.0271192,
+    "rows": [
+      {
+        "arm": "old-memcheck-fullprint",
+        "receipt": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/historical-ppo-pair/old-memcheck-fullprint/receipt.json",
+        "manifest": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/historical-ppo-pair/old-memcheck-fullprint/trace/manifest.json",
+        "log": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/historical-ppo-pair/old-memcheck-fullprint/run.log",
+        "log_sha256": "a669dc17f8ebc1ee8286fb76c83154ecf0e7d425abcd19ee0bb80842146ae64b",
+        "elapsed_seconds": 19.192804098129272,
+        "exit_code": 86,
+        "source_guard": true,
+        "updates": 3,
+        "generation_calls": 3,
+        "strict_fields": 372,
+        "failed_fields": 0,
+        "fallback_count": 0,
+        "sanitizer_total_errors": 196,
+        "printed_errors": 196,
+        "all_errors_printed": true,
+        "error_category": "CUDA_ERROR_INVALID_HANDLE/error400 on cuKernelGetFunction",
+        "reported_memory_access_errors": 0,
+        "reported_719_or_out_of_bounds": false,
+        "strict_memcheck_clean": false
+      },
+      {
+        "arm": "fixed-memcheck-warmed",
+        "receipt": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/historical-ppo-pair/fixed-memcheck-warmed/receipt.json",
+        "manifest": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/historical-ppo-pair/fixed-memcheck-warmed/trace/manifest.json",
+        "log": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/historical-ppo-pair/fixed-memcheck-warmed/run.log",
+        "log_sha256": "05dd5b1ad5f6afc0afc39b796cbc736555559c2fe80fdc10e62d5cd35551bc60",
+        "elapsed_seconds": 1088.6834769248962,
+        "exit_code": 86,
+        "source_guard": true,
+        "updates": 3,
+        "generation_calls": 3,
+        "strict_fields": 372,
+        "failed_fields": 0,
+        "fallback_count": 0,
+        "sanitizer_total_errors": 210,
+        "printed_errors": 210,
+        "all_errors_printed": true,
+        "error_category": "CUDA_ERROR_INVALID_HANDLE/error400 on cuKernelGetFunction",
+        "reported_memory_access_errors": 0,
+        "reported_719_or_out_of_bounds": false,
+        "strict_memcheck_clean": false
+      }
+    ],
+    "historical_producer_tools_identical": true,
+    "historical_producer_tools": {
+      "trl_mainstream_probe.py": "f826c96c59089781c810c7b7cd31ae359b6bd041ef3a07d0a0decdab17bf6fba",
+      "trl_mainstream_online.py": "0848f0da81a382f31af8c7ac65a8d847cb2f086da20dac1c9d94e04440a3715b",
+      "_ecosystem_runner.py": "50582b0198e812eae4ea8f6347bbdc15a1b2502cc715997e7a7ee7c4e57879da",
+      "trl_rl_probe.py": "7325bb6a084a0da365073f2dbbe4dff8e1b0b24ae819a0a4a741849992c7d926",
+      "trl_sft_probe.py": "ea63b03271bef6ef7107d451d38e58565ad85b30f3276fd1fbd5160fb6a7b245"
+    },
+    "sampling_and_initial_state": "Both original historical producer arms use the same retained genuine Torch reference; no math or sampling edits.",
+    "genuine_torch_reference": "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/postfix-cuda16-gate-r2/measurements/ppo/torch/trace",
+    "current_runtime_binding": "fixed receipt sources_before/after equals final R7 CUDA16 runtime map, 1279 entries",
+    "old_runtime_binding": "1277 original failure runtime SHA all equal e17 Git blobs",
+    "original_diagnostic_gaps": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/original-719-readonly-audit.json",
+    "nontraining_failures_preserved": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/historical-ppo-pair/bounded-capture-classification.json",
+    "warmup_120s_interrupt_preserved": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/historical-ppo-pair/official-warmup-contract-receipt.json",
+    "warmup_completed": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/historical-ppo-pair/official-warmup-continuation-receipt.json",
+    "initial_cold_old_capture_default_print_limit_preserved": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/historical-ppo-pair/old-memcheck-warmed/receipt.json",
+    "initial_cold_old_deadline_override": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/historical-ppo-pair/old-memcheck-warmed/deadline-override.json",
+    "limitations": [
+      "No old or fixed capture reproduced the historical error719; no first faulty operator or producer was identified.",
+      "All full-print sanitizer findings were API400, so neither exit86 is a strict memcheck pass.",
+      "CUB/direct-copy/graph handoff causal fixes remain separate evidence; passing endpoints do not attribute the historical crash.",
+      "Cold compilation and control-plane waits are not throughput evidence."
+    ]
+  },
+  "handoff_code_snapshot": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+  "measurement_source_identity": "Use the original receipt, source guards and dated report. The handoff snapshot is not substituted for the measured source."
+}

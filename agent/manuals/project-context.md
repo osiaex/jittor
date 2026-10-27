@@ -62,8 +62,15 @@ changes: [2.0 migration notes](../../docs/releases/2.0.md).
   (KI-DTYPE-004), cuDNN autotuning coupled to scheduling (KI-EXEC-003), SDPA CUDA
   backward parity (KI-OPS-015).
 - **Torch frontend gaps.** torchmetrics on CUDA (KI-COMPAT-010), RNN off cuDNN
-  (KI-COMPAT-011), in-process shim metadata (KI-COMPAT-012), autocast Conv2d bias
-  (KI-COMPAT-013), complex128 placeholder (KI-COMPAT-014).
+  (KI-COMPAT-011), in-process shim metadata (KI-COMPAT-012), complex128
+  placeholder (KI-COMPAT-014).
+- **TRL text training.** `nox -s ecosystem_trl` maintains the pinned 16/18
+  text-Trainer subset on CPU/CUDA with three actual FP32 updates per method.
+  Full Qwen3-0.6B FP16/BF16 LoRA/AdamW numerical parity (KI-COMPAT-018) passes
+  the unchanged CUDA protocol, including exact fresh-process continuation.
+  Historical CUDA generation first-fault attribution (KI-COMPAT-021) remains
+  open alongside repaired shared scan/copy/graph races. Scope and source-bound
+  evidence are in the [TRL validation report](../../docs/results/2026-10-26-trl-numerics-and-validation.md).
 - **Executor and liveness.** Threaded writers to one parameter (KI-EXEC-005,
   KI-EXEC-007), liveness underflows (KI-EXEC-008, KI-EXEC-009), the op-level
   parallel compiler (KI-COMPILER-001).

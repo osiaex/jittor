@@ -1,0 +1,254 @@
+{
+  "record_type": "portable copy; historical paths and GPU identifiers replaced only",
+  "new_execution": false,
+  "source": {
+    "lab_relative_path": "_state/trl-completion-20261026/numerical/formal-r7/final-numerical-audit.json",
+    "bytes": 8768,
+    "sha256": "3431f26464d08adf303fd4235dde3696bef948cfbe16e52ae1c540fbd832fd00"
+  },
+  "normalization": "Only path prefixes and historical GPU UUIDs are replaced with placeholders; hashes and numeric observations are historical values.",
+  "result": {
+    "status": "original_full_model_protocol_complete_byte_exact",
+    "protocol": "Qwen3-0.6B official TRL LoRA SFT AdamW, ten steps and checkpoint-5 fresh-process resume",
+    "thresholds_unchanged": true,
+    "no_observer_in_formal_runs": true,
+    "runtime_source_files": 1279,
+    "producer_source_files": 33,
+    "combined_source_files": 1312,
+    "source_maps_current_and_complete": true,
+    "includes_untracked_native_owners": true,
+    "source_bindings": {
+      "formal-runtime-sources.json": "07fff4528a72efb614f4b003274189f503faa159c1a07ac8ea7725784555df9b",
+      "formal-producer-sources.json": "23240b2db373fae0aa403cacbf175c3485aeba912cb14ab9bad9f3da8d2c28ca",
+      "native-precision-practical-source-binding.json": "f6629a0844da18a16769321f9f9aa19e08920ee96ee70cd2948bd896dce55ad0"
+    },
+    "precisions": {
+      "fp16": {
+        "initial_parameter_and_buffer_hashes_equal": 423,
+        "trainable_adapters": 112,
+        "optimizer_steps": 10,
+        "resume_steps": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "fallback_count": 0,
+        "adapter_error_l2": 0.0,
+        "oracle_actual_update_l2": 0.29898624459423107,
+        "adapter_error_over_actual_update": 0.0,
+        "quality": {
+          "precision": "fp16",
+          "prompts": 3,
+          "top1_matches": 3,
+          "rows": [
+            {
+              "key": "final/0/next_logits",
+              "max_abs": 0.0,
+              "top1_reference": 220,
+              "top1_candidate": 220,
+              "kl": 0.0
+            },
+            {
+              "key": "final/1/next_logits",
+              "max_abs": 0.0,
+              "top1_reference": 9625,
+              "top1_candidate": 9625,
+              "kl": 0.0
+            },
+            {
+              "key": "final/2/next_logits",
+              "max_abs": 0.0,
+              "top1_reference": 1304,
+              "top1_candidate": 1304,
+              "kl": 0.0
+            }
+          ],
+          "reference_manifest": "3e36f5d6497d6c0328953466148cfe4cac636bd3b4db0aad31ac94038917bc67",
+          "candidate_manifest": "9a1d7d1cd61add119961696ab360598bd26535d74c19ec26e2c09f6bbaf4a3db"
+        }
+      },
+      "bf16": {
+        "initial_parameter_and_buffer_hashes_equal": 423,
+        "trainable_adapters": 112,
+        "optimizer_steps": 10,
+        "resume_steps": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "fallback_count": 0,
+        "adapter_error_l2": 0.0,
+        "oracle_actual_update_l2": 0.29893156243103836,
+        "adapter_error_over_actual_update": 0.0,
+        "quality": {
+          "precision": "bf16",
+          "prompts": 3,
+          "top1_matches": 3,
+          "rows": [
+            {
+              "key": "final/0/next_logits",
+              "max_abs": 0.0,
+              "top1_reference": 220,
+              "top1_candidate": 220,
+              "kl": 0.0
+            },
+            {
+              "key": "final/1/next_logits",
+              "max_abs": 0.0,
+              "top1_reference": 9625,
+              "top1_candidate": 9625,
+              "kl": 0.0
+            },
+            {
+              "key": "final/2/next_logits",
+              "max_abs": 0.0,
+              "top1_reference": 1304,
+              "top1_candidate": 1304,
+              "kl": 0.0
+            }
+          ],
+          "reference_manifest": "e8d8ede131defe534b66170f87f6b741b998f7073007c49bde0ddc1ae8563e9f",
+          "candidate_manifest": "8876fa306a5c0d1dac51561da9c53294db67c3568aa4761c7003129195331ca8"
+        }
+      }
+    },
+    "comparisons": {
+      "fp16/cross": {
+        "fields": 5649,
+        "all_storage_bytes_equal": true,
+        "failed_fields": 0,
+        "failed_elements": 0,
+        "max_abs": 0.0,
+        "strict_passed": true,
+        "counter_representation_mismatches": [],
+        "field_inventory": {
+          "final": 9,
+          "adam": 3360,
+          "gradient": 1120,
+          "input": 30,
+          "loss": 10,
+          "parameter": 1120
+        },
+        "comparison_sha256": "de84bd57ce43fd5cfd08cf7d2eb54ced4c83d3f0ea231968cf7183e64a03fa6c",
+        "reference_manifest_sha256": "3e36f5d6497d6c0328953466148cfe4cac636bd3b4db0aad31ac94038917bc67",
+        "candidate_manifest_sha256": "9a1d7d1cd61add119961696ab360598bd26535d74c19ec26e2c09f6bbaf4a3db"
+      },
+      "fp16/jittor-resume": {
+        "fields": 2829,
+        "all_storage_bytes_equal": true,
+        "failed_fields": 0,
+        "failed_elements": 0,
+        "max_abs": 0.0,
+        "strict_passed": true,
+        "counter_representation_mismatches": [],
+        "field_inventory": {
+          "final": 9,
+          "adam": 1680,
+          "gradient": 560,
+          "input": 15,
+          "loss": 5,
+          "parameter": 560
+        },
+        "comparison_sha256": "649e3bab67bdbcfa794843720d0d3144af5e42a3c1572c1a32a5bfeb9128955a",
+        "reference_manifest_sha256": "9a1d7d1cd61add119961696ab360598bd26535d74c19ec26e2c09f6bbaf4a3db",
+        "candidate_manifest_sha256": "8564922fe6f752ccfd8263408f974b28e1c3a2667b828bae6e4a40473ba649dd"
+      },
+      "bf16/cross": {
+        "fields": 5649,
+        "all_storage_bytes_equal": true,
+        "failed_fields": 0,
+        "failed_elements": 0,
+        "max_abs": 0.0,
+        "strict_passed": true,
+        "counter_representation_mismatches": [],
+        "field_inventory": {
+          "final": 9,
+          "adam": 3360,
+          "gradient": 1120,
+          "input": 30,
+          "loss": 10,
+          "parameter": 1120
+        },
+        "comparison_sha256": "49ab297d83b7373a815f90a3a546e162bc2f1224a6c7896cf1a2bacca8ae9985",
+        "reference_manifest_sha256": "e8d8ede131defe534b66170f87f6b741b998f7073007c49bde0ddc1ae8563e9f",
+        "candidate_manifest_sha256": "8876fa306a5c0d1dac51561da9c53294db67c3568aa4761c7003129195331ca8"
+      },
+      "bf16/jittor-resume": {
+        "fields": 2829,
+        "all_storage_bytes_equal": true,
+        "failed_fields": 0,
+        "failed_elements": 0,
+        "max_abs": 0.0,
+        "strict_passed": true,
+        "counter_representation_mismatches": [],
+        "field_inventory": {
+          "final": 9,
+          "adam": 1680,
+          "gradient": 560,
+          "input": 15,
+          "loss": 5,
+          "parameter": 560
+        },
+        "comparison_sha256": "fa1ea0532a163af199559af18a1ecf81429ee7f0b0772f4a667e7b3144466377",
+        "reference_manifest_sha256": "8876fa306a5c0d1dac51561da9c53294db67c3568aa4761c7003129195331ca8",
+        "candidate_manifest_sha256": "39377f7d2e8ceb014ebec5960eb69d29a91fdc0b504b3b556c40d505770497ad"
+      }
+    },
+    "run_receipts": {
+      "jittor-cuda-fp16-native-precision-r7-10": {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/numerical/receipts/jittor-cuda-fp16-native-precision-r7-10.json",
+        "sha256": "281e32b94a8c8a789f0b57a4c7830f12c7500ae1c9055eeff14c7a2b5e15ab06",
+        "environment": {
+          "JITTOR_HOME": "${JITTOR_LAB_ROOT}/_state/trl-local-fixes/amp-jit-gpu1",
+          "CUDA_VISIBLE_DEVICES": "1",
+          "JITTOR_TORCH_SHIM": "1",
+          "JT_USE_CUDA": "1",
+          "JT_CUDA_KERNEL_MATH": "strict"
+        }
+      },
+      "jittor-cuda-fp16-native-precision-r7-resume": {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/numerical/receipts/jittor-cuda-fp16-native-precision-r7-resume.json",
+        "sha256": "52b1ab3fa285e233c06ca25c2dfffaf5b1f7f1df7cdb3afc227d0bb5e9b8b187",
+        "environment": {
+          "JITTOR_HOME": "${JITTOR_LAB_ROOT}/_state/trl-local-fixes/amp-jit-gpu1",
+          "CUDA_VISIBLE_DEVICES": "1",
+          "JITTOR_TORCH_SHIM": "1",
+          "JT_USE_CUDA": "1",
+          "JT_CUDA_KERNEL_MATH": "strict"
+        }
+      },
+      "jittor-cuda-bf16-native-precision-r7-10": {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/numerical/receipts/jittor-cuda-bf16-native-precision-r7-10.json",
+        "sha256": "dc201d4e964bdad235d83e6d1243683a5cdd27f9c0e52cc7689d0405b7c8cb21",
+        "environment": {
+          "JITTOR_HOME": "${JITTOR_LAB_ROOT}/_state/trl-local-fixes/amp-jit-gpu1",
+          "CUDA_VISIBLE_DEVICES": "1",
+          "JITTOR_TORCH_SHIM": "1",
+          "JT_USE_CUDA": "1",
+          "JT_CUDA_KERNEL_MATH": "strict"
+        }
+      },
+      "jittor-cuda-bf16-native-precision-r7-resume": {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/numerical/receipts/jittor-cuda-bf16-native-precision-r7-resume.json",
+        "sha256": "0c88f1a13ba69cc0b45b3a33e06059504b4606f7436b9c6a5a1955f54fe3bbc8",
+        "environment": {
+          "JITTOR_HOME": "${JITTOR_LAB_ROOT}/_state/trl-local-fixes/amp-jit-gpu1",
+          "CUDA_VISIBLE_DEVICES": "1",
+          "JITTOR_TORCH_SHIM": "1",
+          "JT_USE_CUDA": "1",
+          "JT_CUDA_KERNEL_MATH": "strict"
+        }
+      }
+    },
+    "comparison_fields_total": 16956,
+    "unique_array_files_verified": 28254,
+    "verified_array_inventory_sha256": "0a9553a026b2f73af5e6397c2f82190e73f013eca1051cba5075611e290b0de0",
+    "audit_source_sha256": "b3558a4370ab145a2520c75b2f6990fce3b54c2bd29f6a487ea118e15589291d"
+  },
+  "handoff_code_snapshot": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+  "measurement_source_identity": "Use the original receipt, source guards and dated report. The handoff snapshot is not substituted for the measured source."
+}

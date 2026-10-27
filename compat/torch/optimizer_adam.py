@@ -7,17 +7,100 @@ and an import at module level here would put both on an import-time cycle.
 from jittor._core.dtypes import var_dtype_name
 import jittor as jt
 from jittor.optim.algorithms.adam import adam_update
+from .context import get_install_context
 from ..diagnostics import EXPECTED, swallowed
+
+
+class _AdamStep:
+    """Keep native bookkeeping until a caller asks for the tensor state.
+
+    An exposed tensor is authoritative, including writes through aliases or
+    NumPy, which need not advance an autograd version. Do not cache its value.
+    Unobserved counters keep ordinary optimizer capture free of host reads.
+    """
+    def __init__(self, value, *, device=None, dtype=None):
+        self.counter = value if isinstance(value, jt.Var) else None
+        self.value = value if self.counter is None else None
+        self.device = device
+        self.dtype = dtype
+
+    def tensor(self):
+        if self.counter is None:
+            g = get_install_context(jt).target_namespace
+            self.counter = g.tensor(float(self.value), dtype=self.dtype, device=self.device)
+        return self.counter
+
+    def __int__(self):
+        return int(self.value if self.counter is None else self.counter.item())
+
+    def __float__(self):
+        return float(self.value if self.counter is None else self.counter.item())
+
+    def __eq__(self, other):
+        return int(self) == int(other)
+
+    def set(self, value):
+        self.value = value
+        if self.counter is not None:
+            with jt.no_grad():
+                self.counter.fill_(value)
+
+
+class _AdamSteps(list):
+    """Native step bookkeeping backed by Torch's mutable scalar state.
+
+    Uninitialized slots stay integer zero. Once initialized, numeric writes
+    update the existing tensor so references from ``state``/``state_dict``
+    remain live; explicit tensor assignments replace it, just like a dict.
+    Native update and replay code still read the entries with int()/float().
+    """
+    def __init__(self, group, values):
+        super().__init__(values)
+        self.configure(group)
+
+    def configure(self, group):
+        # Do not retain the owning dict: it owns this list, and a cycle would
+        # keep discarded optimizers' parameters and lazy graphs alive.
+        self.fused = group.get("fused", False)
+        self.devices = tuple(parameter.device for parameter in group["params"])
+
+    def __setitem__(self, index, value):
+        old = self[index]
+        if isinstance(value, jt.Var):
+            return super().__setitem__(index, _AdamStep(value))
+        if isinstance(old, _AdamStep):
+            old.set(value)
+            return
+        if value != 0:
+            g = get_install_context(jt).target_namespace
+            fused = self.fused
+            device = self.devices[index] if fused else "cpu"
+            dtype = g.float64 if not fused and g.get_default_dtype() == g.float64 else g.float32
+            value = _AdamStep(value, dtype=dtype, device=device)
+        super().__setitem__(index, value)
 
 
 def _update_in_target_dtype(target, value):
     if var_dtype_name(value) != var_dtype_name(target):  # native, not `.dtype`
         value = value.cast(var_dtype_name(target))
-    target.update(value)
+    from jittor._runtime import step_capture
+    if step_capture.active() and jt.flags.keep_graph:
+        # State capture records this rebinding and writes the result back to
+        # the original storage before returning and on each replay. An
+        # imperative copy would sync and re-run the kept fused update here.
+        target.update(value)
+    else:
+        # Tensor.copy_ keeps the original allocation and its live aliases.
+        # The class-owned spelling also supports native optimizer-state Vars.
+        get_install_context(jt).target_namespace.Tensor.copy_(target, value)
 
 
 def _adam_step(self, loss, retain_graph, closure, kwargs, decoupled_weight_decay):
     from . import optimizer_api as _api
+    for group in self.param_groups:
+        # Native add_param_group does not inherit Torch execution options.
+        # The counter's host/device policy must match the update selector.
+        group.setdefault("fused", getattr(self, "fused", None))
     native_fsdp_loss = None
     if closure is None and callable(loss):
         closure = loss
@@ -61,87 +144,97 @@ def _adam_step(self, loss, retain_graph, closure, kwargs, decoupled_weight_decay
         self.n_step = int(getattr(self, "n_step", 0)) + 1
         step_capture.on_replay(lambda: setattr(self, "n_step", int(self.n_step) + 1))
     jt.flags.node_order = 1
-    for pg in self.param_groups:
-        lr = pg.get("lr", self.lr)
-        eps = pg.get("eps", self.eps)
-        weight_decay = pg.get("weight_decay", self.weight_decay)
-        b0, b1 = pg.get("betas", self.betas)
-        param_steps = _api._torch_param_steps(pg)
-        # torch permits optimizers containing frozen or otherwise
-        # unused parameters. loss.backward() then leaves the group
-        # without gradients and step() must be a no-op, not KeyError.
-        grads = pg.get("grads") or [None] * len(pg["params"])
-        # `use_acl` is an alias of `use_cuda` (see FLAG_ALIASES), so it is true
-        # on a CUDA build as well and cannot say which backend is actually in
-        # use. Asking the dispatcher does: `optim.adamw_fused` is registered
-        # for "acl" only, so it answers None everywhere else. Keying off the
-        # alias sent CUDA into the Ascend-only path, where the native
-        # `fused_adamw` operator aborts with "only available through a mapped
-        # backend" -- reachable from plain `torch.optim.AdamW(..., fused=True)`.
-        fused_impl = None
-        # torch's AdamW is a multi-tensor kernel unless told otherwise: its
-        # default (fused=None, foreach=None) takes the foreach path on CUDA.
-        # So the fused list update is taken unless the caller turned both
-        # off, or asked for a variant it does not compute.
-        fused = pg.get("fused", getattr(self, "fused", None))
-        want_fused = (decoupled_weight_decay and fused is not False
-                      and (fused is True or pg.get("foreach") is not False)
-                      and not pg.get("amsgrad") and not pg.get("maximize"))
-        active = []
-        if want_fused:
+    # Closures and backward above retain their own grad mode. State and
+    # parameter writes are optimizer updates and must leave parameters leaves.
+    with jt.no_grad():
+        for pg in self.param_groups:
+            lr = pg.get("lr", self.lr)
+            eps = pg.get("eps", self.eps)
+            weight_decay = pg.get("weight_decay", self.weight_decay)
+            b0, b1 = pg.get("betas", self.betas)
+            param_steps = _api._torch_param_steps(pg)
+            # torch permits optimizers containing frozen or otherwise
+            # unused parameters. loss.backward() then leaves the group
+            # without gradients and step() must be a no-op, not KeyError.
+            grads = pg.get("grads") or [None] * len(pg["params"])
+            # `use_acl` is an alias of `use_cuda` (see FLAG_ALIASES), so it is true
+            # on a CUDA build as well and cannot say which backend is actually in
+            # use. Asking the dispatcher does: `optim.adamw_fused` is registered
+            # for "acl" only, so it answers None everywhere else. Keying off the
+            # alias sent CUDA into the Ascend-only path, where the native
+            # `fused_adamw` operator aborts with "only available through a mapped
+            # backend" -- reachable from plain `torch.optim.AdamW(..., fused=True)`.
+            fused_impl = None
+            # torch's AdamW is a multi-tensor kernel unless told otherwise: its
+            # default (fused=None, foreach=None) takes the foreach path on CUDA.
+            # So the fused list update is taken unless the caller turned both
+            # off, or asked for a variant it does not compute.
+            fused = pg.get("fused", getattr(self, "fused", None))
+            want_fused = (decoupled_weight_decay and fused is not False
+                          and (fused is True or pg.get("foreach") is not False)
+                          and not pg.get("amsgrad") and not pg.get("maximize"))
+            active = []
+            if want_fused:
+                for i, (p, g, v, m) in enumerate(zip(
+                        pg["params"], grads, pg["values"], pg["m"])):
+                    if not p.requires_grad or not isinstance(g, jt.Var) \
+                            or list(g.shape) != list(p.shape):
+                        continue
+                    active.append((p, m, v, g, int(param_steps[i])))
+                if active:
+                    from jittor._runtime.dispatch import select_kernel
+                    fused_impl = select_kernel("optim.adamw_fused", active)
+            if fused_impl is not None:
+                stepped = []
+                for i, (p, g, v, m) in enumerate(zip(
+                        pg["params"], grads, pg["values"], pg["m"])):
+                    if not p.requires_grad or not isinstance(g, jt.Var) \
+                            or list(g.shape) != list(p.shape):
+                        continue
+                    param_steps[i] = int(param_steps[i]) + 1
+                    stepped.append(i)
+                lr_arg = lr
+                if step_capture.active():   # a replay advances these without step()
+                    # A caller can edit one public scalar counter between calls.
+                    # The fused replay uses one shared step; re-capture if the
+                    # relative counts change instead of applying it to all slots.
+                    def relative_steps(steps=param_steps, indices=tuple(stepped)):
+                        first = int(steps[indices[0]])
+                        return tuple(int(steps[index]) - first for index in indices)
+                    step_capture.guard(relative_steps)
+                    lr_arg = step_capture.live_fused_update(
+                        fused_impl, lr, param_steps, stepped, lambda g=pg: g.get("lr", self.lr),
+                        lambda g=pg: (tuple(g.get("betas", self.betas)),
+                                      g.get("weight_decay", self.weight_decay), g.get("eps", self.eps)),
+                        self.__dict__.get("_amp_found_inf"), self)
+                updates = fused_impl(
+                    active, lr_arg, b0, b1, weight_decay, eps)
+                for (p, m, v, _, _), (new_p, new_m, new_v) in zip(
+                        active, updates):  # fused_adamw keeps each input's dtype
+                    _update_in_target_dtype(p, new_p)
+                    _update_in_target_dtype(m, new_m)
+                    _update_in_target_dtype(v, new_v)
+                    if p.is_stop_grad():
+                        p.start_grad()
+                continue
+            step_capture.refuse("the per-parameter Adam update bakes its step count in")
             for i, (p, g, v, m) in enumerate(zip(
                     pg["params"], grads, pg["values"], pg["m"])):
-                if not p.requires_grad or not isinstance(g, jt.Var) \
-                        or list(g.shape) != list(p.shape):
-                    continue
-                active.append((p, m, v, g, int(param_steps[i])))
-            if active:
-                from jittor._runtime.dispatch import select_kernel
-                fused_impl = select_kernel("optim.adamw_fused", active)
-        if fused_impl is not None:
-            stepped = []
-            for i, (p, g, v, m) in enumerate(zip(
-                    pg["params"], grads, pg["values"], pg["m"])):
-                if not p.requires_grad or not isinstance(g, jt.Var) \
-                        or list(g.shape) != list(p.shape):
+                was_trainable = bool(p.requires_grad)
+                if not was_trainable or not isinstance(g, jt.Var) or list(g.shape) != list(p.shape):
                     continue
                 param_steps[i] = int(param_steps[i]) + 1
-                stepped.append(i)
-            lr_arg = lr
-            if step_capture.active():   # a replay advances these without step()
-                lr_arg = step_capture.live_fused_update(
-                    fused_impl, lr, param_steps, stepped, lambda g=pg: g.get("lr", self.lr),
-                    lambda g=pg: (tuple(g.get("betas", self.betas)),
-                                  g.get("weight_decay", self.weight_decay), g.get("eps", self.eps)),
-                    self.__dict__.get("_amp_found_inf"), self)
-            updates = fused_impl(
-                active, lr_arg, b0, b1, weight_decay, eps)
-            for (p, m, v, _, _), (new_p, new_m, new_v) in zip(
-                    active, updates):  # fused_adamw keeps each input's dtype
-                p.update(new_p)
-                m.update(new_m)
-                v.update(new_v)
-                if p.is_stop_grad():
-                    p.start_grad()
-            continue
-        step_capture.refuse("the per-parameter Adam update bakes its step count in")
-        for i, (p, g, v, m) in enumerate(zip(
-                pg["params"], grads, pg["values"], pg["m"])):
-            was_trainable = bool(p.requires_grad)
-            if not was_trainable or not isinstance(g, jt.Var) or list(g.shape) != list(p.shape):
-                continue
-            param_steps[i] = int(param_steps[i]) + 1
-            _update_in_target_dtype(p, adam_update(
-                p, g, v, m, lr=lr, eps=eps, weight_decay=weight_decay,
-                betas=(b0, b1), step=param_steps[i],
-                decoupled_weight_decay=decoupled_weight_decay,
-                torch_math=True,
-            ))
-            try:
-                if was_trainable and p.is_stop_grad():
-                    p.start_grad()
-            except EXPECTED as exc:
-                swallowed("torch/optimizers.py _adam_step_torch: if was_trainable and p.is_stop_grad():", exc)
+                _update_in_target_dtype(p, adam_update(
+                    p, g, v, m, lr=lr, eps=eps, weight_decay=weight_decay,
+                    betas=(b0, b1), step=param_steps[i],
+                    decoupled_weight_decay=decoupled_weight_decay,
+                    torch_math=True,
+                ))
+                try:
+                    if was_trainable and p.is_stop_grad():
+                        p.start_grad()
+                except EXPECTED as exc:
+                    swallowed("torch/optimizers.py _adam_step_torch: if was_trainable and p.is_stop_grad():", exc)
     # The torch loss.backward(); optimizer.step() spelling keeps grads
     # until an explicit zero_grad(). Preserve Jittor's historical
     # step(loss) behavior for callers using that native shorthand.

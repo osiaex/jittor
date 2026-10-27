@@ -88,13 +88,15 @@ class TestTensorInplaceStorage:
             reference = weakref.ref(root)
             del root
             gc.collect()
-            # Torch retains its tensor base; Jittor's provenance is weak.
-            if hasattr(torch, "_torch_compat_install_context"):
-                assert reference() is None
+            # The independent frontend retains the same public base as Torch.
+            assert reference() is target._base
             pointers = [x.data_ptr() for x in (target, alias)]
             assert operation(target) is target
             assert pointers == [x.data_ptr() for x in (target, alias)]
             np.testing.assert_array_equal(alias.cpu().numpy(), expected)
+            del target, alias
+            gc.collect()
+            assert reference() is None
 
     def test_parameter_data_and_detached_aliases_see_no_grad_writes(self, device):
         parameter = torch.nn.Parameter(torch.tensor([2., 4.], device=device))
@@ -182,7 +184,9 @@ class TestTensorInplaceStorage:
         root = torch.tensor([[1., 2.], [3., 4.]], device=device)
         target = root.transpose(0, 1)
         if hasattr(torch, "_torch_compat_install_context"):
-            assert not target._storage_view_is_physical()
+            assert target._storage_view_is_physical()
+        assert target.data_ptr() == root.data_ptr()
+        assert tuple(target.stride()) == (1, 2)
         target.copy_(torch.tensor([[5., 6.], [7., 8.]], device=device))
         np.testing.assert_array_equal(root.cpu().numpy(), [[5., 7.], [6., 8.]])
 
@@ -190,16 +194,20 @@ class TestTensorInplaceStorage:
 instantiate_device_type_tests(TestTensorInplaceStorage, globals())
 
 
-def test_physical_provenance_distinguishes_pending_and_materialized_transpose():
+def test_physical_provenance_survives_transpose_materialization():
     root = torch.tensor([[1., 2.], [3., 4.]])
     physical = root.view(4).narrow(0, 1, 2)
     transpose = root.transpose(0, 1)
     assert physical._storage_view_is_physical()
-    assert not transpose._storage_view_is_physical()
+    assert transpose._storage_view_is_physical()
+    assert transpose.data_ptr() == root.data_ptr()
+    assert tuple(transpose.stride()) == (1, 2)
     physical.sync()
     transpose.sync()
     assert physical._storage_view_is_physical()
-    assert not transpose._storage_view_is_physical()
+    assert transpose._storage_view_is_physical()
+    assert transpose.data_ptr() == root.data_ptr()
+    assert tuple(transpose.stride()) == (1, 2)
     transpose.copy_(torch.tensor([[5., 6.], [7., 8.]]))
     np.testing.assert_array_equal(root.cpu().numpy(), [[5., 7.], [6., 8.]])
 

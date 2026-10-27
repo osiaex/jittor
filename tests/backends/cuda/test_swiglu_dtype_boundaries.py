@@ -20,9 +20,7 @@ def _round(value, dtype):
 
 @pytest.mark.parametrize("dtype", ["float32", "float16", "bfloat16"])
 def test_fused_swiglu_keeps_silu_rounding_and_autograd_admission(dtype):
-    available = capability.check_accelerator("cuda", backend=jt)
-    if not available.enabled:
-        pytest.skip(available.reason)
+    capability.require_accelerator("cuda")
     gate = np.array([-2.75, -1.25, -.5, -.125, .125, .5, 1.25, 2.75])
     up = np.array([.3, -1.7, .9, 2.4, -2.4, .9, 1.7, -.3])
     data = np.stack((np.concatenate((gate, up)), np.concatenate((-gate, up[::-1]))))

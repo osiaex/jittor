@@ -1,0 +1,55 @@
+Historical failed PPO log excerpt; original line numbers retained. Paths normalized.
+10: Or you can let jittor install cuda for you: `python3.x -m jittor_utils.install_cuda`
+11: [i 1025 16:40:57.167390 48 env_report.py:212] environment set 9 setting(s): cuda_kernel_math='strict' from JT_CUDA_KERNEL_MATH, gdb_path='' from gdb_path [deprecated name], nvcc_path='/usr/local/cuda/bin/nvcc' from JT_BUILD_NVCC_PATH, use_cuda='1' from JT_USE_CUDA, use_cutt='0' from JT_BUILD_USE_CUTT, use_mkl='0' from JT_BUILD_USE_MKL, use_mpi='0' from JT_BUILD_USE_MPI, use_nccl='0' from JT_BUILD_USE_NCCL, use_parallel_op_compiler='0' from JT_USE_PARALLEL_OP_COMPILER
+12: Detected kernel version 5.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+13: ===training policy===
+14: [jittor] index 1061036018 is out of bounds for dimension 1 with size 4
+15: [jittor] index 1069800908 is out of bounds for dimension 1 with size 4
+16: [jittor] index -1085402776 is out of bounds for dimension 1 with size 4
+17: Traceback (most recent call last):
+18:   File "${JITTOR_REPO_ROOT}/agent/skills/torch-compat-repo-runbook/scripts/trl_mainstream_probe.py", line 464, in <module>
+19:     run(options())
+20:   File "${JITTOR_REPO_ROOT}/agent/skills/torch-compat-repo-runbook/scripts/trl_mainstream_probe.py", line 419, in run
+21:     trainer.train()
+22:   File "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/trl/trainer/ppo_trainer.py", line 427, in train
+23:     query_responses, logitss = batch_generation(
+24:                                ^^^^^^^^^^^^^^^^^
+57:           ^^^^^^^^^^^^^^^^^^^^^
+58:   File "${JITTOR_REPO_ROOT}/python/jittor/ops/random.py", line 15, in arange
+59:     if isinstance(start, Var): start = start.item()
+60:                                        ^^^^^^^^^^^^
+61: jittor.JittorError: helper_cuda.h:178: CUDA error at ${JITTOR_REPO_ROOT}/backends/cuda/runtime/driver.cc:618  code=719( cudaErrorLaunchFailure ) cudaStreamSynchronize(cudaStreamPerThread)
+62: index -1088195849 is out of bounds for dimension 1 with size 4 (reported by the indexing kernel).
+63: A kernel faulted. When it indexes a tensor, an out-of-range index is the usual cause; Jittor's indexing kernels name the offending index above, or print it to stdout as `[jittor] index ... is out of bounds` when more than one faulted.
+64: This error is sticky: the CUDA context of this process can no longer be used, and every later CUDA call fails with it. Restart the process.
+65: [Recent launch candidates] backend=cuda device=0 stream=2; candidates are not proof of the faulting launch; overwritten=985; unavailable_threads=0; unrecorded_origin_captures=0
+66:   seq=1113 stream=2 op=fused_op id=0 fused_ids=[34,1] python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/generation/utils.py:998
+67:   seq=1112 stream=2 op=getitem id=21 python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/generation/utils.py:998
+68:   seq=1111 stream=2 op=cublas_matmul id=45 python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py:229
+69:   seq=1110 stream=2 op=clone id=11 python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py:228
+70:   seq=1109 stream=2 op=reshape id=27 python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py:228
+71:   seq=1108 stream=2 op=fused_op id=0 fused_ids=[13] python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py:153
+79:   seq=1100 stream=2 op=getitem id=21 python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py:147
+80:   seq=1099 stream=2 op=cublas_batched_matmul id=44 python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py:145
+81:   seq=1098 stream=2 op=getitem id=21 python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py:145
+82:   older matching candidates omitted=112
+83: [e 1025 16:41:48.849646 48 backend_streams.cc:41] Backend stream cleanup failed: helper_cuda.h:178: CUDA error at ${JITTOR_REPO_ROOT}/backends/cuda/runtime/driver.cc:397  code=719( cudaErrorLaunchFailure ) cudaStreamSynchronize(reinterpret_cast<cudaStream_t>(stream.handle))
+84: A kernel faulted. When it indexes a tensor, an out-of-range index is the usual cause; Jittor's indexing kernels name the offending index above, or print it to stdout as `[jittor] index ... is out of bounds` when more than one faulted.
+85: This error is sticky: the CUDA context of this process can no longer be used, and every later CUDA call fails with it. Restart the process.
+86: [Recent launch candidates] backend=cuda device=0 stream=94816025163952; candidates are not proof of the faulting launch; overwritten=985; unavailable_threads=0; unrecorded_origin_captures=0
+87:   not-found
+88: [e 1025 16:41:48.849684 48 backend_streams.cc:41] Backend stream cleanup failed: helper_cuda.h:178: CUDA error at ${JITTOR_REPO_ROOT}/backends/cuda/runtime/driver.cc:397  code=719( cudaErrorLaunchFailure ) cudaStreamSynchronize(reinterpret_cast<cudaStream_t>(stream.handle))
+89: A kernel faulted. When it indexes a tensor, an out-of-range index is the usual cause; Jittor's indexing kernels name the offending index above, or print it to stdout as `[jittor] index ... is out of bounds` when more than one faulted.
+90: This error is sticky: the CUDA context of this process can no longer be used, and every later CUDA call fails with it. Restart the process.
+91: [Recent launch candidates] backend=cuda device=0 stream=94816014056112; candidates are not proof of the faulting launch; overwritten=985; unavailable_threads=0; unrecorded_origin_captures=0
+92:   not-found
+93: [e 1025 16:41:48.850097 48 backend_streams.cc:95] Compute handoff cleanup failed: helper_cuda.h:178: CUDA error at ${JITTOR_REPO_ROOT}/backends/cuda/runtime/driver.cc:409  code=719( cudaErrorLaunchFailure ) cudaEventDestroy(reinterpret_cast<cudaEvent_t>(event.handle))
+94: A kernel faulted. When it indexes a tensor, an out-of-range index is the usual cause; Jittor's indexing kernels name the offending index above, or print it to stdout as `[jittor] index ... is out of bounds` when more than one faulted.
+95: This error is sticky: the CUDA context of this process can no longer be used, and every later CUDA call fails with it. Restart the process.
+96: [Recent launch candidates] backend=cuda device=0 stream=unknown (device-wide error); candidates are not proof of the faulting launch; overwritten=985; unavailable_threads=0; unrecorded_origin_captures=0
+97:   seq=1113 stream=2 op=fused_op id=0 fused_ids=[34,1] python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/generation/utils.py:998
+98:   seq=1112 stream=2 op=getitem id=21 python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/generation/utils.py:998
+99:   seq=1111 stream=2 op=cublas_matmul id=45 python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py:229
+100:   seq=1110 stream=2 op=clone id=11 python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py:228
+101:   seq=1109 stream=2 op=reshape id=27 python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py:228
+102:   seq=1108 stream=2 op=fused_op id=0 fused_ids=[13] python=${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py:153

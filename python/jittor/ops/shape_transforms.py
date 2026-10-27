@@ -56,7 +56,9 @@ def repeat(x, *shape):
     tar_shape = (np.array(x_shape) * np.array(rep_shape)).tolist()
 
     x = x.reshape(tar_shape)
-    return x
+    # Repetition owns writable storage, including the all-unit case. The
+    # broadcast graph above can still be an overlapping zero-stride view.
+    return x.copy(False)
 
 
 def chunk(x, chunks, dim=0):

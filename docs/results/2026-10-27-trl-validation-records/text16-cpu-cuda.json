@@ -1,0 +1,85 @@
+{
+  "record_type": "portable copy; historical paths and GPU identifiers replaced only",
+  "new_execution": false,
+  "source": {
+    "lab_relative_path": "_state/trl-completion-20261026/indexing/final-r7-cpu-cuda-audit.json",
+    "bytes": 2060,
+    "sha256": "4ef38e459879fd8cf6f654a94f960cabef8e1028d97a74c4ade357bd09a32733"
+  },
+  "normalization": "Only path prefixes and historical GPU UUIDs are replaced with placeholders; hashes and numeric observations are historical values.",
+  "result": {
+    "recorded": 1793004458.3413386,
+    "source_boundary": "final capture integration shared refuse keep0 and active keepgraph state-recorded Adam update; ordinary eager copy_ retained",
+    "cpu": {
+      "root": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/cpu16-final-r3",
+      "exit_code": 0,
+      "outer_source_guard": true,
+      "status": "passed",
+      "selected": 16,
+      "denominator": 18,
+      "methods": 16,
+      "observations": 3700,
+      "all_numerical_pass": true,
+      "fallback": 0,
+      "grad_fields": 1236,
+      "parameter_fields": 1236,
+      "positive_gradient_steps": {
+        "torch": 48,
+        "jittor": 48
+      },
+      "nonzero_parameter_update_steps": {
+        "torch": 48,
+        "jittor": 48
+      },
+      "ppo": {
+        "fields": 375,
+        "all_pass": true,
+        "optimizer_steps": 3,
+        "generation_calls": 3
+      }
+    },
+    "cuda": {
+      "root": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/final-cuda16-r4",
+      "status": "passed",
+      "selected": 16,
+      "denominator": 18,
+      "methods": 16,
+      "observations": 3697,
+      "all_numerical_pass": true,
+      "fallback": 0,
+      "grad_fields": 1236,
+      "parameter_fields": 1236,
+      "positive_gradient_steps": {
+        "torch": 48,
+        "jittor": 48
+      },
+      "nonzero_parameter_update_steps": {
+        "torch": 48,
+        "jittor": 48
+      },
+      "ppo": {
+        "fields": 375,
+        "all_pass": true,
+        "optimizer_steps": 3,
+        "generation_calls": 3
+      }
+    },
+    "runtime_maps_same": true,
+    "runtime_files": 1279,
+    "runtime_map_sha256": "07fff4528a72efb614f4b003274189f503faa159c1a07ac8ea7725784555df9b",
+    "producer_maps_same": true,
+    "stress": {
+      "receipt": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/maintained-boundary-pair-final-r4-receipt.json",
+      "repetitions": 128,
+      "async_before": 0,
+      "async_after": 448,
+      "fallback": 0,
+      "both_guards": true,
+      "both_exit_zero": true,
+      "both_runtime_maps_same": true
+    },
+    "cpu_cache_rearchived": "lossless-cpu16-cache-final-r7-receipt.json"
+  },
+  "handoff_code_snapshot": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+  "measurement_source_identity": "Use the original receipt, source guards and dated report. The handoff snapshot is not substituted for the measured source."
+}

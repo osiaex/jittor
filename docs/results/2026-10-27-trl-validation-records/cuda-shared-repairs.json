@@ -1,0 +1,134 @@
+{
+  "record_type": "portable copy; historical paths and GPU identifiers replaced only",
+  "new_execution": false,
+  "source": {
+    "lab_relative_path": "_state/trl-completion-20261026/indexing/verified-defects-audit-final.json",
+    "bytes": 4963,
+    "sha256": "48ac4205d3430f0fd3b69bdcc77720063e407c2e301be44a0ca778c14dc489bd"
+  },
+  "normalization": "Only path prefixes and historical GPU UUIDs are replaced with placeholders; hashes and numeric observations are historical values.",
+  "result": {
+    "recorded": 1793000134.909733,
+    "status": "CUB_direct_copy_graph_publication_and_GIL_contract_verified_final_CUDA16_passed",
+    "baseline": "e17ddf2b666ecf6127a331c72352174edd5d5b11",
+    "owned_files": [
+      "backends/cuda/kernels/cub/cub_cumsum_op.cc",
+      "tests/backends/cuda/test_cub_cumsum.py",
+      "src/runtime/backend_streams.h",
+      "src/runtime/backend_streams.cc",
+      "src/runtime/backend.cc",
+      "src/core/exec_runner.cc",
+      "src/mem/allocator.cc",
+      "src/runtime/graph_capture.cc",
+      "tests/runtime/test_async_execution.py"
+    ],
+    "owned_patch": "verified-defects.r4.patch",
+    "owned_patch_sha256": "35d439ee761f8264aecd6283f312f4f9dcd42d9faa0d512fdaaba52fb6b425b5",
+    "owned_patch_matches_current": true,
+    "preexisting_untracked_tool_delta": "generation-stress.incremental.patch",
+    "local_causal_evidence": "verified-defects-audit-r3.json",
+    "gil_contract_evidence": "backend-copy-gil-audit.json",
+    "native43": {
+      "receipt": "native43-final-r7.receipt.json",
+      "passed": 42,
+      "failed": 1,
+      "skipped": 0,
+      "fallback": 0,
+      "full_runtime_and_harness_guard": true,
+      "existing_failure": "test_a_python_owned_tape_released_by_the_worker",
+      "clean_origin_control": "origin-tape-r1.receipt.json"
+    },
+    "api142": {
+      "receipt": "cuda142-final-r7.receipt.json",
+      "passed": 142,
+      "failed": 0,
+      "skipped": 0,
+      "fallback": 0,
+      "full_runtime_and_harness_guard": true
+    },
+    "cuda16": {
+      "status": "passed",
+      "methods": 16,
+      "selected": 16,
+      "denominator": 18,
+      "steps": 3,
+      "observations": 3697,
+      "all_numerical_pass": true,
+      "fallback": 0,
+      "runtime_files": 1279,
+      "runtime_map_sha256": "992bab231dbfba64f5c62f9d531d0eb00e14baae3c5d104fa33397c95e3df51d",
+      "producer_map_sha256": "23240b2db373fae0aa403cacbf175c3485aeba912cb14ab9bad9f3da8d2c28ca",
+      "summary_sha256": "95186e820688bbbc0edde2149692a333d0b416c3905ec4b583c9df11e5a20df7",
+      "recorded": 1792999843.355127,
+      "gradients": {
+        "fields": 1236,
+        "elements": 1368006,
+        "failed_fields": 0,
+        "failed_elements": 0
+      },
+      "parameters": {
+        "fields": 1236,
+        "elements": 1368006,
+        "failed_fields": 0,
+        "failed_elements": 0
+      },
+      "losses": {
+        "fields": 48,
+        "elements": 48,
+        "failed_fields": 0,
+        "failed_elements": 0
+      },
+      "positive_gradient_steps": {
+        "torch": 48,
+        "jittor": 48
+      },
+      "nonzero_parameter_update_steps": {
+        "torch": 48,
+        "jittor": 48
+      },
+      "ppo": {
+        "fields": 375,
+        "passed": true,
+        "optimizer_steps": 3,
+        "generation_calls": 3,
+        "fallback": 0
+      }
+    },
+    "mask_stress": {
+      "receipt": "maintained-boundary-pair-final-r3-receipt.json",
+      "repetitions": 128,
+      "actual_async_before": 0,
+      "actual_async_after": 448,
+      "fallback": 0,
+      "both_guards": true,
+      "both_exit_zero": true,
+      "both_match_final_gate_runtime_map": true
+    },
+    "superseded_gate_runs": {
+      "final-cuda16-r1": "interrupted_for_verified_source_fix; original summary remains running, eight strict rows preserved including PPO",
+      "final-cuda16-r2": "failed_before_DPO_import: actual disk 510MB below 512MB protection; one SFT row preserved, no mathematical/indexing failure attributed"
+    },
+    "capacity_recovery": "lossless-cache-archives-receipt.json; smoke owns broader archive receipts",
+    "limitations": [
+      "Original PPO CUDA719 first-fault attribution is not proven by these independent defect repairs.",
+      "All new numerical ordering evidence uses only legal integer zeros/ranges and real CUDA; no new invalid indexing or crashing reproduction.",
+      "Native legacy Tape exact comparison remains a failed node; no assertion or numerical budget was loosened.",
+      "CUB before/after 375-byte-identical payload claim belongs only to that local two-state measurement, not intervening whole-tree numerical repairs.",
+      "Native clone does not prove worker byte-read ordering; earlier new native test version used clone and is excluded from that causal claim. Final tests use independent copy.",
+      "Original retained CUDA719 first-fault attribution remains unproven despite three independent causal defect repairs, full original CUDA gate and legal repeated-mask controls."
+    ],
+    "memcheck_boundary": {
+      "candidate_explicit_exit_code": 86,
+      "candidate_api_errors": 197,
+      "oracle_exit_code": 0,
+      "oracle_errors": 0,
+      "minimal_scalar_api_errors": 1,
+      "minimal_launch_return": 0,
+      "minimal_result": 1.0,
+      "note": "Internal driver probe error remains reported; runtime fallback returns success in the isolated scalar control; no blanket memcheck-green claim"
+    },
+    "harness_scope": "Final native/API guard hashes runtime sources, selected tests, all tests/_helpers Python, tests/compat conftests, ecosystem underscore helpers, pytest config, gate script and external driver. Earlier receipts may bind only runtime+selected tests; use final r7 receipts."
+  },
+  "handoff_code_snapshot": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+  "measurement_source_identity": "Use the original receipt, source guards and dated report. The handoff snapshot is not substituted for the measured source."
+}

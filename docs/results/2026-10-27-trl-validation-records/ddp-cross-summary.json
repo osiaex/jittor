@@ -1,0 +1,201 @@
+{
+  "record_type": "summary_without_passing_field_details; up to 16 failed fields retained",
+  "new_execution": false,
+  "source": {
+    "lab_relative_path": "_state/trl-ddp-row-lse-20261025/cross-comparison.json",
+    "bytes": 2648859,
+    "sha256": "1072197e4b5643c9e6262d3069cf89dc8fe893f995f1b884bbed74817ad078cb"
+  },
+  "normalization": "Only path prefixes and historical GPU UUIDs are replaced with placeholders; hashes and numeric observations are historical values.",
+  "result": {
+    "mode": "cross",
+    "strict_passed": false,
+    "compared_fields": 5686,
+    "failed_fields": 13,
+    "max_abs": 0.00010728836059570312,
+    "reference_manifests": [
+      "c61664d43be7def462196795abd5e24895395db4fb53e263aa12fe5a0f7400f4",
+      "82a5ff47673a4e6aadd2a9909484f7abafd93fe364a0730ea7487bd7bf51c7bb"
+    ],
+    "candidate_manifests": [
+      "7170d930bf448adef3dc822740c8e62c4b5ed4102abf528fd8c18242186cecfd",
+      "227ec3e4df46557da5f7971223e6ebcc057aac493b3b3c4d111b1bab9255aef8"
+    ],
+    "original_compared_field_count": 5686,
+    "failed_field_count_recomputed": 13,
+    "failed_field_examples": {
+      "rank0/final/0/next_logits": {
+        "passed": false,
+        "elements": 151936,
+        "mismatched_elements": 253,
+        "max_abs": 3.0517578125e-05,
+        "reference_l2": 1033.3957140677371,
+        "candidate_l2": 1033.3960059366286,
+        "difference_l2": 0.002921849958905746,
+        "relative_l2": 2.8274260470894737e-06,
+        "cosine": 0.999999999996043,
+        "exact": false,
+        "dtype_match": true
+      },
+      "rank0/final/1/next_logits": {
+        "passed": false,
+        "elements": 151936,
+        "mismatched_elements": 3861,
+        "max_abs": 0.00010728836059570312,
+        "reference_l2": 1424.9699161075646,
+        "candidate_l2": 1424.969508000095,
+        "difference_l2": 0.00990098480768006,
+        "relative_l2": 6.948206201240728e-06,
+        "cosine": 0.9999999999759024,
+        "exact": false,
+        "dtype_match": true
+      },
+      "rank0/final/2/next_logits": {
+        "passed": false,
+        "elements": 151936,
+        "mismatched_elements": 1048,
+        "max_abs": 5.91278076171875e-05,
+        "reference_l2": 1445.481632690219,
+        "candidate_l2": 1445.4814471234833,
+        "difference_l2": 0.005092474970101739,
+        "relative_l2": 3.523029871105327e-06,
+        "cosine": 0.9999999999938025,
+        "exact": false,
+        "dtype_match": true
+      },
+      "rank0/step/1/parameter/base_model.model.model.layers.4.self_attn.q_proj.lora_B.default.weight": {
+        "passed": false,
+        "elements": 16384,
+        "mismatched_elements": 1,
+        "max_abs": 1.3264763765619136e-05,
+        "reference_l2": 0.012797292815854051,
+        "candidate_l2": 0.012797287285674145,
+        "difference_l2": 1.3270447060907704e-05,
+        "relative_l2": 0.0010369729951374936,
+        "cosine": 0.9999994623433648,
+        "exact": false,
+        "dtype_match": true
+      },
+      "rank0/step/10/parameter/base_model.model.model.layers.4.self_attn.q_proj.lora_B.default.weight": {
+        "passed": false,
+        "elements": 16384,
+        "mismatched_elements": 1,
+        "max_abs": 1.3264972949400544e-05,
+        "reference_l2": 0.03236273017289366,
+        "candidate_l2": 0.03236286198251249,
+        "difference_l2": 1.327449663304379e-05,
+        "relative_l2": 0.0004101785159078522,
+        "cosine": 0.9999999158854295,
+        "exact": false,
+        "dtype_match": true
+      },
+      "rank0/step/2/parameter/base_model.model.model.layers.4.self_attn.q_proj.lora_B.default.weight": {
+        "passed": false,
+        "elements": 16384,
+        "mismatched_elements": 1,
+        "max_abs": 1.3264798326417804e-05,
+        "reference_l2": 0.018074778597875565,
+        "candidate_l2": 0.018074833096245795,
+        "difference_l2": 1.3271650996241249e-05,
+        "relative_l2": 0.0007342635443291761,
+        "cosine": 0.9999997304338821,
+        "exact": false,
+        "dtype_match": true
+      },
+      "rank0/step/3/parameter/base_model.model.model.layers.4.self_attn.q_proj.lora_B.default.weight": {
+        "passed": false,
+        "elements": 16384,
+        "mismatched_elements": 1,
+        "max_abs": 1.326482743024826e-05,
+        "reference_l2": 0.02211072999069776,
+        "candidate_l2": 0.022110807404901074,
+        "difference_l2": 1.3272723225472729e-05,
+        "relative_l2": 0.0006002842615805412,
+        "cosine": 0.9999998198361627,
+        "exact": false,
+        "dtype_match": true
+      },
+      "rank0/step/4/parameter/base_model.model.model.layers.4.self_attn.q_proj.lora_B.default.weight": {
+        "passed": false,
+        "elements": 16384,
+        "mismatched_elements": 1,
+        "max_abs": 1.3264856534078717e-05,
+        "reference_l2": 0.025018730366713465,
+        "candidate_l2": 0.025018827030261932,
+        "difference_l2": 1.3273429327520783e-05,
+        "relative_l2": 0.0005305396849865975,
+        "cosine": 0.9999998592718291,
+        "exact": false,
+        "dtype_match": true
+      },
+      "rank0/step/5/parameter/base_model.model.model.layers.4.self_attn.q_proj.lora_B.default.weight": {
+        "passed": false,
+        "elements": 16384,
+        "mismatched_elements": 1,
+        "max_abs": 1.3264900189824402e-05,
+        "reference_l2": 0.027334559484458624,
+        "candidate_l2": 0.02733466828050994,
+        "difference_l2": 1.3273938010318385e-05,
+        "relative_l2": 0.0004856100943520028,
+        "cosine": 0.9999998820998082,
+        "exact": false,
+        "dtype_match": true
+      },
+      "rank0/step/6/parameter/base_model.model.model.layers.4.self_attn.q_proj.lora_B.default.weight": {
+        "passed": false,
+        "elements": 16384,
+        "mismatched_elements": 1,
+        "max_abs": 1.3264900189824402e-05,
+        "reference_l2": 0.02912353939938641,
+        "candidate_l2": 0.029123657332588624,
+        "difference_l2": 1.3274209003779998e-05,
+        "relative_l2": 0.00045578969031695595,
+        "cosine": 0.9999998961364985,
+        "exact": false,
+        "dtype_match": true
+      },
+      "rank0/step/7/parameter/base_model.model.model.layers.4.self_attn.q_proj.lora_B.default.weight": {
+        "passed": false,
+        "elements": 16384,
+        "mismatched_elements": 1,
+        "max_abs": 1.326491474173963e-05,
+        "reference_l2": 0.03056860967123479,
+        "candidate_l2": 0.03056873403070341,
+        "difference_l2": 1.3274323299870494e-05,
+        "relative_l2": 0.00043424687752029813,
+        "cosine": 0.9999999057234834,
+        "exact": false,
+        "dtype_match": true
+      },
+      "rank0/step/8/parameter/base_model.model.model.layers.4.self_attn.q_proj.lora_B.default.weight": {
+        "passed": false,
+        "elements": 16384,
+        "mismatched_elements": 1,
+        "max_abs": 1.3264943845570087e-05,
+        "reference_l2": 0.031469610005693434,
+        "candidate_l2": 0.031469737789405115,
+        "difference_l2": 1.3274410218770326e-05,
+        "relative_l2": 0.0004218168009190054,
+        "cosine": 0.9999999110438983,
+        "exact": false,
+        "dtype_match": true
+      },
+      "rank0/step/9/parameter/base_model.model.model.layers.4.self_attn.q_proj.lora_B.default.weight": {
+        "passed": false,
+        "elements": 16384,
+        "mismatched_elements": 1,
+        "max_abs": 1.3264972949400544e-05,
+        "reference_l2": 0.032069219376885186,
+        "candidate_l2": 0.032069350109052375,
+        "difference_l2": 1.3274477616386636e-05,
+        "relative_l2": 0.0004139320468135436,
+        "cosine": 0.9999999143387887,
+        "exact": false,
+        "dtype_match": true
+      }
+    },
+    "failed_examples_truncated": false
+  },
+  "handoff_code_snapshot": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+  "measurement_source_identity": "Use the original receipt, source guards and dated report. The handoff snapshot is not substituted for the measured source."
+}

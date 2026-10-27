@@ -1,7 +1,11 @@
 """Stable Torch Tensor method implementations; install only binds these objects."""
 from importlib import import_module
+from collections.abc import Sequence
+import warnings
 from jittor._core.dtypes import dtype_name as _jittor_dtype_name
 from ...context import get_install_context
+from ...amp import (_autocast_state, _preserve_autocast_arithmetic,
+                    _cuda_autocast_fp32_input)
 from ...types import _PYTHON_SCALAR_DTYPES, _make_cpu_resident, _make_cuda_resident, _var_is_cpu_resident
 from ....stub_policy import degraded as _degraded, unimplemented as _unimplemented
 from ..core import _promote_pair
@@ -165,11 +169,13 @@ def _set_data_owner(view, slices, value):
 
 
 def _torch_setitem(self, slices, value):
+    slices = _normalize_tensor_indices(self, _normalize_index_sequence(slices))
     _context = get_install_context(_owner.jt)
     _native = _context.state["tensor_native_api"]
     _orig_setitem = _native['_orig_setitem']
     if _set_data_owner(self, slices, value):
         return self
+    self._check_inplace_autograd()
     if isinstance(value, _NativeVar):
         # torch copies a value into the destination's placement, so
         # `cuda_t[...] = cpu_value` and `cpu_t[...] = cuda_value` both work.
@@ -195,6 +201,11 @@ def _torch_setitem(self, slices, value):
                 value = value.squeeze(0)
     except _owner.EXPECTED as exc:
         _owner.swallowed("torch/installers/tensor.py _torch_setitem: mask = slices", exc)
+    if (not _owner.jt.flags.no_grad and isinstance(value, _NativeVar)
+            and value.requires_grad and not self.requires_grad):
+        # Native assignment preserves a stopped destination's policy. Torch
+        # indexed writes instead gain the RHS edge, just like index_add_.
+        return _ip(self, self.setitem(slices, value), preserve_storage=True)
     result = _orig_setitem(self, slices, value)
     return result
 
@@ -488,10 +499,19 @@ class _Storage:
         return _storage_reach_elements(self._var) * _storage_dsize(self._var)
 
 
+def _dense_arithmetic_operand(other):
+    # COO compatibility tensors already own differentiable dense storage.
+    # Reuse it without copying/detaching, retaining duplicate-index value
+    # gradients and the existing dense kernels' device/writeback policy.
+    from ..numerical.sparse import _SparseCOO
+    return other.to_dense() if isinstance(other, _SparseCOO) else other
+
+
 def _add(input, other, *, alpha=1, out=None):
     _context = get_install_context(_owner.jt)
     _native = _context.state["tensor_native_api"]
     _native_add = _native['_native_add']
+    other = _dense_arithmetic_operand(other)
     if alpha != 1:
         other = other * alpha
     result = _native_add(input, other)
@@ -547,19 +567,41 @@ def _is_basic_index(index):
     return isinstance(index, _owner.numbers.Integral) and not isinstance(index, (bool, _owner.np.bool_))
 
 
-def _torch_getitem(self, slices):
-    # PyTorch accepts NumPy integer/bool arrays as advanced indices.
-    # Convert them before the native fast path or the dispatcher sees them.
-    def normalize(index):
-        if isinstance(index, _owner.np.ndarray) and index.ndim:
-            if index.dtype.kind not in ("b", "i", "u"):
-                return index
-            return _owner.jt.array(index, dtype=str(index.dtype))
-        if isinstance(index, tuple):
-            return tuple(normalize(item) for item in index)
-        return index
+def _normalize_tensor_indices(self, index):
+    """Normalize index tensors without changing their caller-owned placement."""
+    if isinstance(index, _owner.np.ndarray) and index.ndim:
+        if index.dtype.kind not in ("b", "i", "u"):
+            return index
+        index = _owner.jt.array(index, dtype=str(index.dtype))
+    if isinstance(index, tuple):
+        return tuple(_normalize_tensor_indices(self, item) for item in index)
+    if (isinstance(index, _NativeVar)
+            and _jittor_dtype_name(index.dtype) in ("bool", "uint8", "int32", "int64")
+            and _owner._device_is_cpu(index.device)
+            and _owner._device_is_cuda(self.device)):
+        # Torch allows CPU advanced indices for accelerator data. Native
+        # operators require matching placement, so copy at this boundary.
+        return index.to(self.device)
+    return index
 
-    slices = normalize(slices)
+
+def _normalize_index_sequence(index):
+    # Matches PyTorch's treatSequenceAsTuple (still present in 2.11).
+    # This interpretation applies only to the outer, short non-array sequence;
+    # lists within an explicit tuple remain individual advanced indices.
+    if (isinstance(index, Sequence)
+            and not isinstance(index, (tuple, str, bytes)) and len(index) < 32):
+        if any(item is None or item is Ellipsis
+               or isinstance(item, (_NativeVar, _owner.np.ndarray, Sequence, slice))
+               for item in index):
+            warnings.warn("Using a non-tuple sequence for multidimensional indexing is deprecated; "
+                          "use x[tuple(seq)] instead of x[seq].", UserWarning, stacklevel=3)
+            return tuple(index)
+    return index
+
+
+def _torch_getitem(self, slices):
+    slices = _normalize_tensor_indices(self, _normalize_index_sequence(slices))
     # A basic index, natively (`src/bindings/pyjt/py_compat_fast.h`).
     fast = _owner.jt.core._fast_getitem(self, slices)
     if fast is not NotImplemented:
@@ -1328,7 +1370,11 @@ def _var_norm(self, p="fro", dim=None, keepdims=None, *rest,
 def _binary_native(opname, left, right, native_api=None):
     if native_api is None:
         native_api = get_install_context(_owner.jt).state["tensor_native_api"]
-    result = native_api["operators"][opname](left, right)
+    if _preserve_autocast_arithmetic():
+        with _owner.jt.flag_scope(amp_reg=0):
+            result = native_api["operators"][opname](left, right)
+    else:
+        result = native_api["operators"][opname](left, right)
     return _owner._mark_cpu_like(result, left, right)
 
 
@@ -1467,7 +1513,7 @@ _FAST_BINARY_OPERATORS = ('__add__', '__radd__', '__sub__', '__rsub__',
 
 def _tensor_add(self, other):
     fast = _FAST_BINARY
-    if fast is not None:
+    if fast is not None and not _autocast_state.order:
         out = fast(self, other, 0)
         if out is not None:
             return out
@@ -1476,7 +1522,7 @@ def _tensor_add(self, other):
 
 def _tensor_radd(self, other):
     fast = _FAST_BINARY
-    if fast is not None:
+    if fast is not None and not _autocast_state.order:
         out = fast(self, other, 1)
         if out is not None:
             return out
@@ -1485,7 +1531,7 @@ def _tensor_radd(self, other):
 
 def _tensor_sub(self, other):
     fast = _FAST_BINARY
-    if fast is not None:
+    if fast is not None and not _autocast_state.order:
         out = fast(self, other, 2)
         if out is not None:
             return out
@@ -1494,16 +1540,40 @@ def _tensor_sub(self, other):
 
 def _tensor_rsub(self, other):
     fast = _FAST_BINARY
-    if fast is not None:
+    if fast is not None and not _autocast_state.order:
         out = fast(self, other, 3)
         if out is not None:
             return out
     return _promoting_binary(self, other, '__rsub__', True)
 
 
+def _cuda_scalar_multiply(self, other):
+    """Torch CUDA half scalar opmath, without changing native arithmetic.
+
+    A Python float keeps the Tensor's result dtype, but the CUDA coefficient
+    is FP32. Native mixed-half codegen otherwise narrows that coefficient
+    before multiplying, changing both the output and its input derivative.
+    """
+    if type(other) is not float:
+        return None
+    context = get_install_context(_owner.jt)
+    native_api = context.state["tensor_native_api"]
+    own = _own_dtype_name(self, native_api)
+    if own not in ("float16", "bfloat16") or _device(self).type != "cuda":
+        return None
+    from ...frontend import tensor_frontend
+    with tensor_frontend(context.state["Var"], like=self), _owner.jt.flag_scope(amp_reg=0):
+        wide = self.cast("float32")
+        result = native_api["operators"]["__mul__"](wide, other).cast(own)
+    return _owner._mark_cpu_like(result, self)
+
+
 def _tensor_mul(self, other):
+    scalar_result = _cuda_scalar_multiply(self, other)
+    if scalar_result is not None:
+        return scalar_result
     fast = _FAST_BINARY
-    if fast is not None:
+    if fast is not None and not _autocast_state.order:
         out = fast(self, other, 4)
         if out is not None:
             return out
@@ -1511,8 +1581,11 @@ def _tensor_mul(self, other):
 
 
 def _tensor_rmul(self, other):
+    scalar_result = _cuda_scalar_multiply(self, other)
+    if scalar_result is not None:
+        return scalar_result
     fast = _FAST_BINARY
-    if fast is not None:
+    if fast is not None and not _autocast_state.order:
         out = fast(self, other, 5)
         if out is not None:
             return out
@@ -1536,16 +1609,28 @@ def _tensor_rmod(self, other):
 
 
 def _tensor_pow(self, other):
+    if _preserve_autocast_arithmetic():
+        self, other = _cuda_autocast_fp32_input(self), _cuda_autocast_fp32_input(other)
+        with _owner.jt.flag_scope(amp_reg=0):
+            return _promoting_binary(self, other, '__pow__', False)
     return _promoting_binary(self, other, '__pow__', False)
 
 
+def _api_pow(self, exponent):
+    return _tensor_pow(self, exponent)
+
+
 def _tensor_rpow(self, other):
+    if _preserve_autocast_arithmetic():
+        self, other = _cuda_autocast_fp32_input(self), _cuda_autocast_fp32_input(other)
+        with _owner.jt.flag_scope(amp_reg=0):
+            return _promoting_binary(self, other, '__rpow__', True)
     return _promoting_binary(self, other, '__rpow__', True)
 
 
 def _tensor_truediv(self, other):
     fast = _FAST_BINARY
-    if fast is not None:
+    if fast is not None and not _autocast_state.order:
         out = fast(self, other, 6)
         if out is not None:
             return out
@@ -1554,7 +1639,7 @@ def _tensor_truediv(self, other):
 
 def _tensor_rtruediv(self, other):
     fast = _FAST_BINARY
-    if fast is not None:
+    if fast is not None and not _autocast_state.order:
         out = fast(self, other, 7)
         if out is not None:
             return out
@@ -1568,11 +1653,14 @@ _BINARY_APIS = {
     '__rsub__': _tensor_rsub,
     '__mul__': _tensor_mul,
     '__rmul__': _tensor_rmul,
+    'mul': _tensor_mul,
+    'multiply': _tensor_mul,
     '__floordiv__': _tensor_floordiv,
     '__rfloordiv__': _tensor_rfloordiv,
     '__mod__': _tensor_mod,
     '__rmod__': _tensor_rmod,
     '__pow__': _tensor_pow,
+    'pow': _api_pow,
     '__rpow__': _tensor_rpow,
     '__truediv__': _tensor_truediv,
     '__rtruediv__': _tensor_rtruediv,
@@ -1620,10 +1708,12 @@ def _api_zero(self):
 
 
 def _api_add(self, o, alpha=1):
+    o = _dense_arithmetic_operand(o)
     return _ip(self, self + o * alpha, preserve_storage=True)
 
 
 def _api_sub(self, o, alpha=1):
+    o = _dense_arithmetic_operand(o)
     return _ip(self, self - o * alpha, preserve_storage=True)
 
 
@@ -1692,7 +1782,10 @@ def _api_uniform(self, a=0.0, b=1.0, generator=None):
 
 
 def _api_tolist(self):
-    return self.item() if getattr(self, '_torch_0d', False) else self.numpy().tolist()
+    # Native numpy()/item() can migrate storage to the host. Read a CPU copy
+    # so decoding/logging cannot silently move the caller's accelerator Tensor.
+    host = _make_cpu_resident(self)
+    return host.item() if getattr(self, '_torch_0d', False) else host.numpy().tolist()
 
 
 def _api_contiguous(self, memory_format="contiguous_format"):
@@ -1905,7 +1998,8 @@ def _api_log_(self):
     return _ip(self, _owner.jt.log(self))
 
 def _api_exp_(self):
-    return _ip(self, _owner.jt.exp(self))
+    from ...native_api import _tensor_unary_inplace
+    return _tensor_unary_inplace(self, "exp")
 
 def _api_sqrt_(self):
     return _ip(self, _owner.jt.sqrt(self))

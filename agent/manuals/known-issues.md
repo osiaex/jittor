@@ -2099,21 +2099,6 @@ workaround.
 - Exit condition: the in-process shim answers `importlib.metadata.version("torch")`
   and those cases run.
 
-## KI-COMPAT-013: under `torch.autocast` a `Conv2d` module with a bias returns float32
-
-- Severity: Medium (an autocast divergence from PyTorch: downstream half
-  kernels receive a float32 activation)
-- Status: Open; recorded on HEAD in the 2026-09-24 report, reproduced
-  2026-10-12 on CPU and CUDA. The case runs as a strict expected failure.
-- Owner: torch compatibility / AMP maintainers
-- Symptom: `with torch.autocast("cuda", dtype=torch.float16): torch.nn.Conv2d(4, 8, 3, padding=1, bias=True)(x)`
-  gives float32 for a float32 input; PyTorch gives float16.
-- Cause: not isolated; suspected that the module path adds its float32 bias
-  after the autocast cast and promotes back.
-- Workaround: cast the output, or keep the bias in the compute dtype.
-- Evidence: `compat/tests/torch/test_torch_compat_unimplemented.py::TestAutocast::test_autocast_conv2d_module_keeps_the_compute_dtype_through_a_bias`.
-- Exit condition: the case XPASSes and loses its marker.
-
 ## KI-COMPAT-014: `torch.complex128` is still a frontend placeholder although the core has complex128
 
 - Severity: Medium (the frontend refuses a dtype the core computes with)
@@ -2252,3 +2237,210 @@ workaround.
 - Exit condition: extend `files` one package at a time with real fixes (no
   `# type: ignore`, no relaxed configuration); delete the entry when
   `python/jittor` and `backends/` are covered.
+
+
+## KI-COMPAT-016: Tensor shared memory is missing for streaming Hugging Face datasets
+
+- Severity: Medium.
+- Status: Open, reproduced on CPU at `897d9cc61` on 2026-10-21.
+- Owner: Torch compatibility and storage maintainers.
+- Symptom: with `datasets==3.6.0`, `IterableDataset.from_generator` calls
+  `torch.tensor(0).share_memory_()` while creating its epoch counter and raises
+  `AttributeError`. This blocked the initial TRL 0.21.0 Qwen3 SFT experiment
+  before the Trainer was created.
+- Cause: the Torch Tensor surface does not expose `share_memory_`; implementing
+  it requires actual shared storage semantics, not an identity stub.
+- Workaround: use a map-style `datasets.Dataset` with zero dataloader workers
+  when streaming/shared worker state is not required. This does not establish
+  streaming or multiprocess dataset support.
+- Evidence: in the activated Jittor Torch environment,
+  `python -c 'import torch; torch.tensor(0).share_memory_()'` reproduces the
+  missing method. The downstream reproduction is
+  `datasets.IterableDataset.from_generator(lambda: iter([{"text": "example"}]))`.
+- Exit condition: implement and test CPU shared-storage visibility across
+  processes and the documented CUDA behavior, then execute the real datasets
+  streaming constructor and worker path without substituting a no-op.
+
+## KI-COMPAT-017: Full Qwen3 DPO training exceeds the strict CPU numerical budget
+
+- Severity: Medium.
+- Status: Open, reproduced at `b9517ff13` on 2026-10-21.
+- Owner: numerical kernels and Torch compatibility maintainers.
+- Symptom: ten FP32 SGD updates through TRL 0.21.0 DPOTrainer finish on both
+  independent runtimes, but 47 of 3,100 parameter-gradient tensors exceed the
+  fixed `atol=1e-5, rtol=1e-4` element budget on CPU. All final parameter tensors
+  pass; close final weights do not establish strict gradient agreement.
+- Cause: not isolated to an operator. Matched checkpoint, inputs, buffers,
+  downstream sources and actual CPU dispatch rule out a different training
+  protocol or device fallback. A separate initial reward-accuracy disagreement
+  comes from applying a strict positive-margin test to zero versus rounding
+  noise; it does not explain the gradient differences.
+- Follow-up (2026-10-22): [same-weight precision controls](../../docs/results/2026-10-22-trl-rounding-diagnosis.md)
+  strongly support finite-precision and operation-order sensitivity. Explicit
+  FP64 reduces full-forward discrepancy to 1.17e-13; GRPO hotspot deviations
+  from FP64 are comparable in both runtimes. This bounded diagnostic does not
+  clear every ten-step failure; the original acceptance status is unchanged.
+- Follow-up (2026-10-23): [full-checkpoint and practical controls](../../docs/results/2026-10-23-trl-full-and-practical.md)
+  also find strict-budget failures in other full TRL methods and LoRA/AdamW
+  profiles. The earlier FP64 diagnosis does not establish the cause of every
+  new method's drift. The independently reproduced AMP policy deviation is
+  tracked separately as KI-COMPAT-018.
+- Workaround: retain the failed comparisons and quantitative error report;
+  do not claim strict numerical equivalence or relax the acceptance threshold.
+- Evidence: the CPU command pair and measured errors in
+  [the DPO/GRPO report](../../docs/results/2026-10-21-trl-dpo-grpo-qwen3.md), using
+  `trl_rl_probe.py --algorithm dpo --steps 10` and independent interpreters.
+- Exit condition: identify the numerical source and rerun the unchanged
+  complete protocol within its original budget on CPU and the claimed devices.
+
+## KI-COMPAT-019: Externally injected fractional Adam live counters are truncated
+
+- Severity: Low.
+- Status: Open, narrowed on 2026-10-25; normal integer counter lifecycle and
+  legacy initialized numeric-zero restore are repaired.
+- Owner: Torch optimizer and serialization compatibility maintainers.
+- Symptom: genuine Torch Adam/AdamW accepts an external live-counter mutation
+  to 7.5 and advances it to 8.5. A read-only AST-extracted model of the candidate
+  bookkeeping advances it to 8. This is outside the valid integer-step TRL
+  experiments; it is not evidence that normal live state is still a Python
+  float, nor a fresh candidate numerical or CUDA reproduction.
+- Cause: the integer native step bookkeeping converts the exposed value through
+  `int(...)` before incrementing. Normal live counters now expose stable mutable
+  scalar Tensors with tested identity, dtype/device, state-dict aliasing,
+  integer mutation, replacement/deletion, group addition and reordered restore.
+  Initialized legacy state with a numeric zero and existing moments is also
+  retained. Original checkpoints already held scalar FP32 counters; the old
+  live Python-float representation must not be described as a saved-FP64 defect.
+- Workaround: keep externally edited step counters at nonnegative integer values
+  for the measured TRL scope. Do not claim complete Torch counter mutation or
+  graph-capture equivalence from eager integer lifecycle coverage.
+- Evidence: [current text and LoRA validation](../../docs/results/2026-10-25-trl-text-and-lora.md),
+  `compat/tests/torch/test_torch_adam_live_state.py`, twelve independent genuine
+  Torch controls and seven final CUDA counter/default-fused tests.
+  `$JITTOR_LAB_ROOT/_state/trl-adam-live/counter-fractional-readonly-review-20261025.json`
+  explicitly separates the genuine-Torch observation from the extracted scalar
+  model and records that no Jittor candidate numerical run was made for this edge.
+- Exit condition: preserve supported fractional live-counter mutations through
+  the actual optimizer update and restore on the claimed devices, with
+  independent Torch controls and without regressing normal integer lifecycle,
+  identity, aliasing or exact checkpoint continuation.
+
+## KI-COMPAT-021: Intermittent CUDA indexing failure during tiny PPO generation
+
+- Severity: High.
+- Status: Open for attribution of the original first fault. Shared scan and
+  cross-thread stream-ordering defects were independently reproduced and
+  repaired on 2026-10-26; their passing controls do not establish which one
+  caused the 2026-10-25 failure at `527cb3205` plus the row-LSE repair.
+- Owner: CUDA executor/indexing and Torch compatibility maintainers.
+- Symptom: the maintained sixteen-method CUDA gate completes six candidate
+  methods, then tiny PPO generation reports out-of-range indices on an axis
+  of length four and CUDA error 719. The process context is unusable afterward.
+  This is a failed gate, even though full-model PPO LoRA and later isolated
+  tiny PPO controls complete on the same machine.
+- Cause: the original error-719 first fault remains unbound. Two shared owners
+  now have independent causal reproductions. The tiled CUB scan reused shared
+  carry without uniform collective participation/barriers: racecheck reports
+  72 hazards in its direct control and 27 in official PPO, then zero after
+  repair. Separately, imperative device copies and graph launches did not
+  publish their compute-stream work to the async worker; legal delayed writes
+  made a later independent copy read stale bytes. The shared handoff scope
+  repairs both boundaries without a device-wide synchronization on each call.
+  Transformers' `kv_arange += kv_offset` can reach this direct-copy owner;
+  identity paths can instead return without a device copy. This static
+  call-path evidence does not establish that the historical failed call
+  performed a copy or capture its first fault.
+- Workaround: none validated. Preserve the failed trace; a successful retry
+  demonstrates only that retry's execution, not absence of the intermittent fault.
+- Evidence: [PPO and loss-repeatability report](../../docs/results/2026-10-25-trl-ppo-and-loss-determinism.md#intermittent-cuda-generation-failure-remains-open),
+  `tools/run_trl_gate.py --device cuda --steps 3`; unversioned
+  `$JITTOR_LAB_ROOT/_state/trl-ddp-local-20261025/postfix-cuda16-gate-r2/logs/ppo-jittor.log`
+  and `ppo-generation-bounded-investigation-receipt.json` bind the failure,
+  exact-environment controls, mask tests and preserved cache artifacts.
+  `$JITTOR_LAB_ROOT/_state/trl-completion-20261026/indexing/verified-defects-audit-final.json`
+  binds the three valid shared-owner red/green controls and exact patch.
+  `indexing/final-r7-cpu-cuda-audit.json` binds the final sixteen-method gates
+  on both devices and the 128-sample mask control to the numerical sources.
+  The separate `indexing/historical-ppo-pair/fullprint-pair-audit.json` (SHA256
+  `6ca5e537caf2e112b4171484b46ba28827271a6cde48ebe4461eb34949b17b40`)
+  reconstructs all 1,277 historical runtime files and uses the same historical
+  producer on old/repaired endpoints. Both complete three updates, three
+  generations and all 372 original fields, with zero fallback and no reproduced
+  error 719. Full-print memcheck returns 86: its 196/210 reports are handled
+  `cuKernelGetFunction` API-400 queries. This is not strict sanitizer acceptance
+  or historical first-fault attribution. Invalid setup attempts, initialization
+  waits and interrupted compilation retain their own excluded status. See the
+  [final numerical and validation report](../../docs/results/2026-10-26-trl-numerics-and-validation.md)
+  for the distinct protocol and source boundaries.
+- Exit condition: obtain a causal reproduction/first-fault binding, repair the
+  shared owner, and pass the unchanged CUDA gate plus repeated generation
+  controls without cache clearing, sampling replay changes or global sync workarounds.
+
+## KI-BACKEND-021: cuDNN BF16 Conv2d selection fails on the tested SM75 device
+
+- Severity: Medium.
+- Status: Open, reproduced on 2026-10-24 at the `df3d3899b` source boundary.
+- Owner: CUDA convolution backend maintainers.
+- Symptom: native BF16 Conv2d raises `best_algo_idx != -1` during cuDNN
+  selection. A `(1,2,3,3)` input filled with `1e5`, `(2,2,1,1)` identity
+  weights and two zero bias values reproduce it with `amp_reg=0`.
+- Cause: the native vendor route fails before numerical observations; the same
+  physical SM75 card completes BF16 forward/backward in genuine Torch.
+  This is not evidence that the card cannot execute BF16, and is distinct
+  from the separately verified Conv2d bias autocast dtype behavior.
+- Workaround: use the verified FP32 configuration. The affected BF16 Conv2d
+  AMP boundary test is explicitly deselected in the bounded validation;
+  this backend/dtype combination is not admitted by those passing counts.
+- Evidence: [local TRL repairs and revalidation](../../docs/results/2026-10-24-trl-local-fixes.md),
+  the unversioned native `amp_native_conv_control.py --dtype bfloat16 --amp 0`
+  reproduction and its independent Torch controls under zero-fallback guards.
+- Exit condition: native BF16 Conv2d forward and all input/weight/bias gradients
+  execute on the affected CUDA architecture and pass the independent Torch
+  protocol; restore the excluded AMP test without a dtype or fallback escape.
+
+## KI-OPS-017: Native BF16 CPU MLP misses its convergence budget with MKL disabled
+
+- Severity: Medium.
+- Status: Open, independently reproduced on 2026-10-26 on clean
+  `ca56aa802c2acf9a22bca32d1bee3276381ed203` and the TRL working sources.
+- Owner: native CPU arithmetic and mixed-precision maintainers.
+- Symptom: with `JT_BUILD_USE_MKL=0`, the unchanged native mixed-precision
+  regression ends at BF16 loss `0.228515625` versus FP32 `0.1223831773` after
+  80 SGD steps. The 86.72% excess exceeds its unchanged 25% budget; all
+  gradients remain finite. This is full BF16 parameters/inputs, not autocast
+  with FP32 master parameters.
+- Cause: not localized. Isolated main/smoke caches and serial/parallel
+  compilers reproduce the same losses. A clean upstream worktree reproduces
+  the failure, so the TRL AMP repairs did not introduce it.
+- Workaround: use the validated FP32 CPU configuration. Do not treat this
+  result as evidence that every CPU BF16 or autocast profile fails.
+- Evidence: `tests/nn/test_mixed_precision_training.py`, with
+  `JITTOR_TORCH_SHIM=0 JT_BUILD_USE_MKL=0 JT_BUILD_NVCC_PATH=''`;
+  the [TRL admission report](../../docs/results/2026-10-25-trl-protocol-and-amp-opmath.md)
+  binds the independent upstream control and complete logs.
+- Exit condition: the unchanged no-MKL BF16 test passes its original budget,
+  with the same initialization, data, optimizer and independent Torch profile
+  retained for comparison.
+
+## KI-OPS-016: Generic grouped BF16 Conv3d weight-gradient accumulation differs from Torch
+
+- Severity: Medium.
+- Status: Open, reproduced on CPU and CUDA on 2026-10-24.
+- Owner: Native convolution and reduction maintainers.
+- Symptom: the generic route of explicit BF16 `conv3d` with `groups=2`, input `(1,2,2,2,2)`
+  filled with `1e5`, and ones weights `(2,1,1,1,1)` produces weight
+  gradients `794624`; genuine Torch produces `798720`. The input rounds to
+  `99840`, and the loss is the sum of outputs.
+- Cause: the native grouped-convolution accumulation differs by one BF16 ULP.
+  The diagnostic forces the generic route; it does not attribute the same
+  discrepancy to cuDNN. It reproduces without Torch import, with AMP disabled, under both the old
+  and repaired contraction scopes; it predates the frontend AMP repair.
+- Workaround: use FP32 when this accumulation accuracy is required.
+  The independent failing BF16 fixture remains evidence; using an exactly
+  summable input for a separate dtype-boundary test does not close this issue.
+- Evidence: [local TRL repairs and revalidation](../../docs/results/2026-10-24-trl-local-fixes.md),
+  unversioned `amp2_native_grouped_portable_conv.py` and
+  `amp2_torch_grouped_control.py`, with CPU/CUDA observations and zero fallback.
+- Exit condition: match independent Torch forward and complete input/weight
+  gradients for the original large-value BF16 fixture on CPU and CUDA,
+  retaining the original numerical budget and checking the vendor/generic routes.

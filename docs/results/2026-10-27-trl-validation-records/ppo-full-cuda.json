@@ -1,0 +1,165 @@
+{
+  "record_type": "portable copy; historical paths and GPU identifiers replaced only",
+  "new_execution": false,
+  "source": {
+    "lab_relative_path": "_state/trl-ppo-lora-20261025/cuda-10-r2-final-audit.json",
+    "bytes": 4626,
+    "sha256": "9da395095c1ec99ce320e64b374da0edffa8cc1a8618ce40dddaebbd3de11330"
+  },
+  "normalization": "Only path prefixes and historical GPU UUIDs are replaced with placeholders; hashes and numeric observations are historical values.",
+  "result": {
+    "status": "complete_pair_audited",
+    "strict_passed": false,
+    "reference_manifest_sha256": "0b5ed113d2ac23baf9c4ef8cda1a760a0dc793faee88119264ddd116f895e330",
+    "candidate_manifest_sha256": "ad6db2f50be5b760060124fc918f038f4e44f3cc9683274953719ee5ebb61220",
+    "sources": {
+      "audit_ppo_lora.py": "2b48ef53de468fb8ca00cec1d6a71c0ff42dedb86399bce135dbb58ced244fe6",
+      "trl_rl_probe.py": "7325bb6a084a0da365073f2dbbe4dff8e1b0b24ae819a0a4a741849992c7d926",
+      "trl_final_logits_probe.py": "1953458c932053ea5415765be4f8c64b7f266d8c8beb753ad3f73d04bfa01f7e"
+    },
+    "optimizer_calls": {
+      "torch": 10,
+      "jittor": 10
+    },
+    "trainable_tensors": 225,
+    "trainable_elements": 2294784,
+    "all_fields": {
+      "fields": 13625,
+      "elements": 106990165,
+      "failed_fields": 238,
+      "failed_elements": 25280,
+      "max_abs": 0.000365597182037547,
+      "global_relative_l2": 1.320555855063939e-07
+    },
+    "groups": {
+      "generation": {
+        "fields": 45,
+        "elements": 12155026,
+        "failed_fields": 19,
+        "failed_elements": 5883,
+        "max_abs": 8.153915405273438e-05,
+        "global_relative_l2": 1.1032423925762942e-07
+      },
+      "forward": {
+        "fields": 50,
+        "elements": 1519808,
+        "failed_fields": 9,
+        "failed_elements": 156,
+        "max_abs": 3.0517578125e-05,
+        "global_relative_l2": 3.622974877394181e-08
+      },
+      "loss": {
+        "fields": 10,
+        "elements": 10,
+        "failed_fields": 0,
+        "failed_elements": 0,
+        "max_abs": 1.1682510375976562e-05,
+        "global_relative_l2": 9.396526115947767e-06
+      },
+      "gradient": {
+        "fields": 2250,
+        "elements": 22947840,
+        "failed_fields": 40,
+        "failed_elements": 834,
+        "max_abs": 0.0001430511474609375,
+        "global_relative_l2": 2.2676379900826493e-05
+      },
+      "gradient_norm": {
+        "fields": 2250,
+        "elements": 2250,
+        "failed_fields": 46,
+        "failed_elements": 46,
+        "max_abs": 0.000365597182037547,
+        "global_relative_l2": 1.3790760659325233e-05
+      },
+      "updated_parameter": {
+        "fields": 2250,
+        "elements": 22947840,
+        "failed_fields": 114,
+        "failed_elements": 389,
+        "max_abs": 0.0001385089271934703,
+        "global_relative_l2": 2.2827707215326872e-05
+      },
+      "adam_step": {
+        "fields": 2250,
+        "elements": 2250,
+        "failed_fields": 0,
+        "failed_elements": 0,
+        "max_abs": 0.0,
+        "global_relative_l2": 0.0
+      },
+      "exp_avg": {
+        "fields": 2250,
+        "elements": 22947840,
+        "failed_fields": 0,
+        "failed_elements": 0,
+        "max_abs": 8.52346420288086e-06,
+        "global_relative_l2": 2.083842596256602e-05
+      },
+      "exp_avg_sq": {
+        "fields": 2250,
+        "elements": 22947840,
+        "failed_fields": 0,
+        "failed_elements": 0,
+        "max_abs": 3.1888484954833984e-06,
+        "global_relative_l2": 1.5054018435105427e-05
+      },
+      "final_eval": {
+        "fields": 20,
+        "elements": 1519461,
+        "failed_fields": 10,
+        "failed_elements": 17972,
+        "max_abs": 0.000179290771484375,
+        "global_relative_l2": 2.8688112382419147e-07
+      }
+    },
+    "final_gradient": {
+      "fields": 225,
+      "elements": 2294784,
+      "failed_fields": 1,
+      "failed_elements": 2,
+      "max_abs": 4.6253204345703125e-05,
+      "global_relative_l2": 1.911455642177485e-05
+    },
+    "final_parameters": {
+      "fields": 225,
+      "elements": 2294784,
+      "failed_fields": 12,
+      "failed_elements": 46,
+      "max_abs": 0.0001384369097650051,
+      "global_relative_l2": 2.4304471378206345e-05
+    },
+    "final_trainable_update_relative_error": 0.0008685945894600828,
+    "final_next_logits": {
+      "elements": 1519360,
+      "positions": 10,
+      "max_abs": 0.000179290771484375,
+      "rmse": 1.9307258991798134e-05,
+      "global_relative_l2": 5.641973941304731e-06,
+      "difference_l2": 0.02379857572839655,
+      "reference_l2": 4218.129324236656,
+      "failed_fields": 10,
+      "failed_elements": 17972,
+      "top1_matches": 10,
+      "top1_agreement": 1.0,
+      "mean_softmax_kl_torch_to_jittor": 2.5823874184302194e-10,
+      "max_softmax_kl_torch_to_jittor": 1.822540776564146e-09
+    },
+    "positive_gradient_steps": {
+      "torch": 10,
+      "jittor": 10
+    },
+    "nonzero_update_steps": {
+      "torch": 10,
+      "jittor": 10
+    },
+    "limitations": [
+      "Full trained LoRA/value-head tensor coverage; frozen base hash checked, not trained.",
+      "Controlled discrete rollout replay; official policy/value/reward floating computations unchanged.",
+      "No quality, convergence, timing or full-parameter PPO admission claim.",
+      "One-minibatch CPU control has undefined upstream logged val/ratio_var; loss/gradients/states all finite."
+    ]
+  },
+  "handoff_code_snapshot": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+  "measurement_source_identity": "Use the original receipt, source guards and dated report. The handoff snapshot is not substituted for the measured source."
+}

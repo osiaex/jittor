@@ -1,0 +1,332 @@
+{
+  "format_version": 1,
+  "historical_acceptance_through": "2026-10-26",
+  "indexed_on": "2026-10-27",
+  "code_snapshot": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+  "records_branch": "backup/trl-records-20261027",
+  "scope": "TRL 0.21.0 text training, CPU/CUDA; item-specific bounds apply",
+  "new_hardware_validation": false,
+  "items": [
+    {
+      "id": 1,
+      "responsibility": "fixed-scope-and-versions",
+      "status": "completed",
+      "tracked_reports_or_reproducers": [
+        "requirements/trl-compat.txt",
+        "agent/skills/trl-torch-compat/SKILL.md"
+      ],
+      "small_historical_records": [
+        "sft-numerical.json"
+      ]
+    },
+    {
+      "id": 2,
+      "responsibility": "python-call-contracts",
+      "status": "completed",
+      "tracked_reports_or_reproducers": [
+        "docs/results/2026-10-24-trl-local-fixes.md",
+        "docs/results/2026-10-25-trl-text-and-lora.md",
+        "compat/tests/torch/test_ddp_comm_hooks.py"
+      ],
+      "small_historical_records": [
+        "text16-cpu-cuda.json"
+      ]
+    },
+    {
+      "id": 3,
+      "responsibility": "initial-data-and-model-state",
+      "status": "completed within map-style/zero-worker scope",
+      "tracked_reports_or_reproducers": [
+        "docs/results/2026-10-21-trl-qwen3-sft.md",
+        "agent/skills/torch-compat-repo-runbook/scripts/trl_sft_probe.py",
+        "agent/skills/torch-compat-repo-runbook/scripts/trl_practical_probe.py"
+      ],
+      "small_historical_records": [
+        "sft-numerical.json"
+      ]
+    },
+    {
+      "id": 4,
+      "responsibility": "official-trainer-control-flow",
+      "status": "completed within tiny FP32 16-method scope",
+      "tracked_reports_or_reproducers": [
+        "tools/run_trl_gate.py",
+        "docs/results/2026-10-26-trl-numerics-and-validation.md"
+      ],
+      "small_historical_records": [
+        "text16-cpu-cuda.json"
+      ]
+    },
+    {
+      "id": 5,
+      "responsibility": "single-device-forward-backward-numerics",
+      "status": "open; full SFT accepted, other recorded full-model profiles not all accepted",
+      "tracked_reports_or_reproducers": [
+        "docs/results/2026-10-26-trl-numerics-and-validation.md",
+        "docs/results/2026-10-25-trl-text-and-lora.md",
+        "docs/results/2026-10-25-trl-ppo-and-loss-determinism.md"
+      ],
+      "small_historical_records": [
+        "sft-numerical.json",
+        "dpo-cpu-summary.json",
+        "dpo-cuda-summary.json",
+        "grpo-cpu-summary.json",
+        "grpo-cuda-summary.json",
+        "sft-cpu-summary.json",
+        "sft-cuda-summary.json",
+        "ppo-full-cpu.json",
+        "ppo-full-cuda.json"
+      ]
+    },
+    {
+      "id": 6,
+      "responsibility": "standard-adamw-update",
+      "status": "completed within measured standard integer-step scope",
+      "tracked_reports_or_reproducers": [
+        "docs/results/2026-10-26-trl-numerics-and-validation.md",
+        "compat/tests/torch/test_torch_adam_live_state.py",
+        "tests/backends/cuda/test_fused_adamw_cuda.py"
+      ],
+      "small_historical_records": [
+        "sft-numerical.json"
+      ]
+    },
+    {
+      "id": 7,
+      "responsibility": "single-device-cuda-execution-stability",
+      "status": "open historical error719 attribution; current gates and separately causal repairs pass",
+      "tracked_reports_or_reproducers": [
+        "agent/manuals/known-issues.md",
+        "tests/backends/cuda/test_cub_cumsum.py",
+        "tests/runtime/test_async_execution.py"
+      ],
+      "small_historical_records": [
+        "cuda-shared-repairs.json",
+        "ppo-historical-fault.json",
+        "ppo-historical-pair.json",
+        "ppo-original-error-excerpt.txt"
+      ]
+    },
+    {
+      "id": 8,
+      "responsibility": "checkpoint-state-roundtrip",
+      "status": "completed within measured SFT and FP32 DDP self-resume scope",
+      "tracked_reports_or_reproducers": [
+        "docs/results/2026-10-26-trl-numerics-and-validation.md",
+        "docs/results/2026-10-25-trl-ppo-and-loss-determinism.md"
+      ],
+      "small_historical_records": [
+        "sft-numerical.json",
+        "ddp-repeat-resume.json"
+      ]
+    },
+    {
+      "id": 9,
+      "responsibility": "two-rank-training-agreement",
+      "status": "open strict cross-runtime agreement; 13/5686 fields failed in latest full historical comparison",
+      "tracked_reports_or_reproducers": [
+        "docs/results/2026-10-25-trl-ppo-and-loss-determinism.md",
+        "agent/skills/torch-compat-repo-runbook/scripts/trl_ddp_probe.py"
+      ],
+      "small_historical_records": [
+        "ddp-cross-summary.json"
+      ]
+    },
+    {
+      "id": 10,
+      "responsibility": "other-existing-framework-behavior",
+      "status": "completed within recorded smoke/structure selections",
+      "tracked_reports_or_reproducers": [
+        "docs/results/2026-10-26-trl-numerics-and-validation.md"
+      ],
+      "small_historical_records": [
+        "smoke-source-binding.json",
+        "structure.json"
+      ]
+    },
+    {
+      "id": 11,
+      "responsibility": "throughput-baseline",
+      "status": "completed measurement, no parity-speed target claimed",
+      "tracked_reports_or_reproducers": [
+        "agent/skills/torch-compat-repo-runbook/scripts/trl_throughput_probe.py",
+        "docs/results/2026-10-26-trl-numerics-and-validation.md"
+      ],
+      "small_historical_records": [
+        "throughput.json"
+      ]
+    }
+  ],
+  "original_sources": [
+    {
+      "file": "completion.json",
+      "lab_relative_path": "_state/trl-completion-20261026/final-completion-audit.json",
+      "bytes": 2688,
+      "sha256": "8ae89d060f71399a4416e50f2648af3999be25431e29b607a961583c68decf28",
+      "copy_kind": "portable copy; historical paths and GPU identifiers replaced only"
+    },
+    {
+      "file": "sft-numerical.json",
+      "lab_relative_path": "_state/trl-completion-20261026/numerical/formal-r7/final-numerical-audit.json",
+      "bytes": 8768,
+      "sha256": "3431f26464d08adf303fd4235dde3696bef948cfbe16e52ae1c540fbd832fd00",
+      "copy_kind": "portable copy; historical paths and GPU identifiers replaced only"
+    },
+    {
+      "file": "text16-cpu-cuda.json",
+      "lab_relative_path": "_state/trl-completion-20261026/indexing/final-r7-cpu-cuda-audit.json",
+      "bytes": 2060,
+      "sha256": "4ef38e459879fd8cf6f654a94f960cabef8e1028d97a74c4ade357bd09a32733",
+      "copy_kind": "portable copy; historical paths and GPU identifiers replaced only"
+    },
+    {
+      "file": "cuda-shared-repairs.json",
+      "lab_relative_path": "_state/trl-completion-20261026/indexing/verified-defects-audit-final.json",
+      "bytes": 4963,
+      "sha256": "48ac4205d3430f0fd3b69bdcc77720063e407c2e301be44a0ca778c14dc489bd",
+      "copy_kind": "portable copy; historical paths and GPU identifiers replaced only"
+    },
+    {
+      "file": "ppo-historical-fault.json",
+      "lab_relative_path": "_state/trl-ddp-local-20261025/ppo-generation-bounded-investigation-receipt.json",
+      "bytes": 7316,
+      "sha256": "f778b7bb2efea881149f7e85df220f27b0c51f4f76aa7ecea0baef3e385ae2e7",
+      "copy_kind": "portable copy; historical paths and GPU identifiers replaced only"
+    },
+    {
+      "file": "ppo-historical-pair.json",
+      "lab_relative_path": "_state/trl-completion-20261026/indexing/historical-ppo-pair/fullprint-pair-audit.json",
+      "bytes": 4892,
+      "sha256": "6ca5e537caf2e112b4171484b46ba28827271a6cde48ebe4461eb34949b17b40",
+      "copy_kind": "portable copy; historical paths and GPU identifiers replaced only"
+    },
+    {
+      "file": "smoke-source-binding.json",
+      "lab_relative_path": "_state/trl-completion-20261026/smoke/final-acceptance-source-binding.json",
+      "bytes": 6814,
+      "sha256": "e03c083222a8b390f2d99efc0567340ade18a45b4319be6a35aa2f80fd00ee37",
+      "copy_kind": "portable copy; historical paths and GPU identifiers replaced only"
+    },
+    {
+      "file": "structure.json",
+      "lab_relative_path": "_state/trl-completion-20261026/smoke/precommit-structure-final-r2.json",
+      "bytes": 582254,
+      "sha256": "1502fd1213f4859075ae78b2d48745d6257cf9be1c826924939ebfc88a2e2695",
+      "copy_kind": "portable copy; historical paths and GPU identifiers replaced only"
+    },
+    {
+      "file": "throughput.json",
+      "lab_relative_path": "_state/trl-completion-20261026/throughput-final-r7/final-throughput-audit.json",
+      "bytes": 28308,
+      "sha256": "7ccaad9b1a572cf33165f78a5ec584cae49e9deaee30f8b84695c7784001a460",
+      "copy_kind": "portable copy; historical paths and GPU identifiers replaced only"
+    },
+    {
+      "file": "ddp-repeat-resume.json",
+      "lab_relative_path": "_state/trl-ddp-local-20261025/postfix-ddp-final-proof.json",
+      "bytes": 5709,
+      "sha256": "1b872d652f6972009bd60394dc8603da5007ae7fcfa4a1e54f37115d5c5a5b4f",
+      "copy_kind": "portable copy; historical paths and GPU identifiers replaced only"
+    },
+    {
+      "file": "ppo-full-cpu.json",
+      "lab_relative_path": "_state/trl-ppo-lora-20261025/cpu-1-r2-final-audit.json",
+      "bytes": 4605,
+      "sha256": "0e9696552de6ddd52c7954561c6ca59f0d4b14fe33044894256f5cad4e5d072f",
+      "copy_kind": "portable copy; historical paths and GPU identifiers replaced only"
+    },
+    {
+      "file": "ppo-full-cuda.json",
+      "lab_relative_path": "_state/trl-ppo-lora-20261025/cuda-10-r2-final-audit.json",
+      "bytes": 4626,
+      "sha256": "9da395095c1ec99ce320e64b374da0edffa8cc1a8618ce40dddaebbd3de11330",
+      "copy_kind": "portable copy; historical paths and GPU identifiers replaced only"
+    },
+    {
+      "file": "ddp-cross-summary.json",
+      "lab_relative_path": "_state/trl-ddp-row-lse-20261025/cross-comparison.json",
+      "bytes": 2648859,
+      "sha256": "1072197e4b5643c9e6262d3069cf89dc8fe893f995f1b884bbed74817ad078cb",
+      "copy_kind": "summary_without_passing_field_details; up to 16 failed fields retained"
+    },
+    {
+      "file": "dpo-cpu-summary.json",
+      "lab_relative_path": "_state/trl-lora-expanded/dpo-fp32-a1-l32-cpu-v2-comparison.json",
+      "bytes": 2461589,
+      "sha256": "65a67f07c17bf5e8624d4e1f65a7a25a920997a35c028b9dc29b1002016ba010",
+      "copy_kind": "summary_without_passing_field_details; up to 16 failed fields retained"
+    },
+    {
+      "file": "dpo-cuda-summary.json",
+      "lab_relative_path": "_state/trl-lora-expanded/dpo-fp32-a1-l32-cuda-v2-comparison.json",
+      "bytes": 2461613,
+      "sha256": "48218acf6d32b7fbc1f3f38770973c7df7494875a78efad350333f1e53d820ba",
+      "copy_kind": "summary_without_passing_field_details; up to 16 failed fields retained"
+    },
+    {
+      "file": "grpo-cpu-summary.json",
+      "lab_relative_path": "_state/trl-lora-expanded/grpo-fp32-a1-l32-cpu-v2-comparison.json",
+      "bytes": 2471342,
+      "sha256": "543d70bcbd95bcea16c340da31aa7ae84224cad4cbefaa9c640a576461ad6ef2",
+      "copy_kind": "summary_without_passing_field_details; up to 16 failed fields retained"
+    },
+    {
+      "file": "grpo-cuda-summary.json",
+      "lab_relative_path": "_state/trl-lora-expanded/grpo-fp32-a1-l32-cuda-v2-comparison.json",
+      "bytes": 2470640,
+      "sha256": "63822b42e4d21897c674edda975ec2ad93cbe832103c4ea123ad89af2aa4f747",
+      "copy_kind": "summary_without_passing_field_details; up to 16 failed fields retained"
+    },
+    {
+      "file": "sft-cpu-summary.json",
+      "lab_relative_path": "_state/trl-lora-expanded/sft-fp32-a2-l128-cpu-v2-comparison.json",
+      "bytes": 2464582,
+      "sha256": "c26085bb8c782bf2ae721e7632f4a7db205ff2c44de80b4dc10f23b601bcabc2",
+      "copy_kind": "summary_without_passing_field_details; up to 16 failed fields retained"
+    },
+    {
+      "file": "sft-cuda-summary.json",
+      "lab_relative_path": "_state/trl-lora-expanded/sft-fp32-a2-l128-cuda-v2-comparison.json",
+      "bytes": 2464783,
+      "sha256": "69be4b67c126eefc9618bb1a8577af703f8e81c65b383668ffc2f2da36dddd4e",
+      "copy_kind": "summary_without_passing_field_details; up to 16 failed fields retained"
+    },
+    {
+      "file": "formal-runtime-sources.json",
+      "lab_relative_path": "_state/trl-completion-20261026/numerical/formal-r7/formal-runtime-sources.json",
+      "bytes": 140780,
+      "sha256": "07fff4528a72efb614f4b003274189f503faa159c1a07ac8ea7725784555df9b",
+      "copy_kind": "byte-exact original relative-path source map"
+    },
+    {
+      "file": "formal-producer-sources.json",
+      "lab_relative_path": "_state/trl-completion-20261026/numerical/formal-r7/formal-producer-sources.json",
+      "bytes": 4598,
+      "sha256": "23240b2db373fae0aa403cacbf175c3485aeba912cb14ab9bad9f3da8d2c28ca",
+      "copy_kind": "byte-exact original relative-path source map"
+    },
+    {
+      "file": "ppo-original-error-excerpt.txt",
+      "lab_relative_path": "_state/trl-ddp-local-20261025/postfix-cuda16-gate-r2/logs/ppo-jittor.log",
+      "bytes": 15336,
+      "sha256": "fb86523c145e7b5273c90c9fee1035008493879caf6577f69ff97649c71cdbfd",
+      "copy_kind": "bounded failure excerpt, not a complete log"
+    }
+  ],
+  "limitations": [
+    "These are historical records and portable summaries, not new measurements.",
+    "Relative source maps are preserved byte-for-byte; portable receipts replace machine paths and GPU UUIDs.",
+    "Comparison summaries omit successful field details and cap failed examples; original source hashes remain recorded.",
+    "Original arrays, model weights, optimizer checkpoints and full logs are not included.",
+    "A hash reference alone cannot recover an omitted original file.",
+    "Historical failures retain their failure status; records do not close missing acceptance or error719 attribution."
+  ],
+  "original_commit_history": {
+    "file": "source-history.bundle",
+    "sha256": "32a473b63a76c3c106990d03cd56bfede52f8f49f3cf4c5fd6589651c92de72f",
+    "bytes": 468470,
+    "base": "ca56aa802c2acf9a22bca32d1bee3276381ed203",
+    "head": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+    "commits": 20
+  }
+}

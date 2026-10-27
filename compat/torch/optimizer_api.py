@@ -5,6 +5,7 @@ import weakref as _weakref
 import jittor as jt
 import numpy as np
 from .context import get_install_context
+from .optimizer_adam import _AdamStep, _AdamSteps
 from ..diagnostics import EXPECTED, swallowed
 from typing import Any, Dict, List
 from .. import fsdp_hooks as _fsdp_hooks
@@ -46,7 +47,13 @@ def _init(self, *a, **k):
         object.__setattr__(self, "_Optimizer__zero_grad", False)
 
 
+
+
 def _torch_param_steps(pg):
+    # Adam's native add_param_group can introduce groups after construction.
+    # Its two moment lists identify the same state layout as the initializer.
+    if "m" in pg and "values" in pg:
+        pg.setdefault("_torch_adam_params", tuple(pg.get("params", ())))
     _sync_adam_group_params(pg)
     params = list(pg.get("params", []))
     steps = pg.get("_torch_steps")
@@ -56,6 +63,10 @@ def _torch_param_steps(pg):
         steps.append(0)
     if len(steps) > len(params):
         del steps[len(params):]
+    if "_torch_adam_params" in pg and not isinstance(steps, _AdamSteps):
+        steps = pg["_torch_steps"] = _AdamSteps(pg, steps)
+    elif isinstance(steps, _AdamSteps):
+        steps.configure(pg)
     return steps
 
 
@@ -89,7 +100,7 @@ def _sync_adam_group_params(pg, *, replacements=()):
                 result.append(old_values[old_index])
             else:
                 result.append(0 if key == "_torch_steps" else _state_buffer(parameter))
-        pg[key] = result
+        pg[key] = _AdamSteps(pg, result) if isinstance(old_values, _AdamSteps) else result
     pg["_torch_adam_params"] = current
 
 
@@ -140,7 +151,9 @@ class _OptState:
                 if self.get(p, marker) is not marker:
                     yield p
     def _reset_slot(self, pg, i):
-        _torch_param_steps(pg)[i] = 0
+        # Erasing state drops the old counter; retained external references
+        # must not be reset or reused by the next initialization.
+        list.__setitem__(_torch_param_steps(pg), i, 0)
         if _torch_optimizer_kind(self._opt) == "sgd":
             _momentum_initialized_flags(pg)[i] = False
         for key in ("m", "values", "v", "d", "pre_grad"):
@@ -160,9 +173,9 @@ class _OptState:
             raise KeyError(param)
         kind = _torch_optimizer_kind(self._opt)
         if key == "step":
-            if isinstance(value, jt.Var):
+            if isinstance(value, jt.Var) and kind not in ("adam", "adamw"):
                 value = value.item()
-            _torch_param_steps(pg)[i] = int(value)
+            _torch_param_steps(pg)[i] = value if isinstance(value, jt.Var) else int(value)
             self._sync_n_step()
             return
         mappings = {
@@ -191,14 +204,14 @@ class _OptState:
         if pg is None:
             return default
         steps = _torch_param_steps(pg)
-        if int(steps[i]) <= 0:
+        if not isinstance(steps[i], _AdamStep) and int(steps[i]) <= 0:
             return default
         kind = _torch_optimizer_kind(self._opt)
         if kind in ("adam", "adamw") and "m" in pg and "values" in pg:
             return _ParamState(self, param, {
                 "exp_avg": pg["m"][i],
                 "exp_avg_sq": pg["values"][i],
-                "step": float(steps[i])})
+                "step": steps[i].tensor()})
         if kind == "sgd":
             # Present exactly while a buffer exists, like torch: independent
             # of the *current* momentum, so pausing momentum keeps it.
@@ -327,7 +340,7 @@ def _state_dict_torch(self):
         steps = _torch_param_steps(pg)
         for i, p in enumerate(pg.get("params", [])):
             pid = param_ids.get(id(p))
-            if pid is None or int(steps[i]) <= 0:
+            if pid is None or (not isinstance(steps[i], _AdamStep) and int(steps[i]) <= 0):
                 continue
             entry = {}
             if kind in ("adam", "adamw"):
@@ -352,7 +365,8 @@ def _state_dict_torch(self):
                         entry[target] = values[i]
             if entry:
                 if kind != "sgd":
-                    entry["step"] = g.tensor(float(steps[i]), dtype=g.float32)
+                    entry["step"] = (steps[i].tensor() if kind in ("adam", "adamw")
+                                     else g.tensor(float(steps[i]), dtype=g.float32))
                 state[pid] = entry
     return {"state": state, "param_groups": param_groups}
 
@@ -417,7 +431,7 @@ def _load_state_dict_torch(self, state_dict):
     for pg in self.param_groups:
         steps = _torch_param_steps(pg)
         for i in range(len(steps)):
-            steps[i] = 0
+            list.__setitem__(steps, i, 0)
         if kind == "sgd":
             flags = _momentum_initialized_flags(pg)
             for i in range(len(flags)):
@@ -455,7 +469,26 @@ def _load_state_dict_torch(self, state_dict):
                         ("pre_grad", "pre_grad")):
                     if target in st and source in pg and i < len(pg[source]):
                         pg[source][i] = st[target]
-            steps[i] = step
+            if kind in ("adam", "adamw") and isinstance(st.get("step"), jt.Var):
+                counter = st["step"]
+                if pg.get("fused") or pg.get("capturable"):
+                    g = _context.target_namespace
+                    device = pg["params"][i].device
+                    if counter.device != device or counter.dtype != g.float32:
+                        counter = counter.to(device=device, dtype=g.float32)
+                steps[i] = counter
+            elif kind in ("adam", "adamw") and step == 0 \
+                    and "exp_avg" in st and "exp_avg_sq" in st:
+                # Numeric counters in legacy checkpoints still identify an
+                # initialized slot, even at zero. Integer zero is reserved for
+                # absent state in the native bookkeeping list.
+                g = _context.target_namespace
+                fused = pg.get("fused") or pg.get("capturable")
+                device = pg["params"][i].device if fused else "cpu"
+                dtype = g.float64 if not fused and g.get_default_dtype() == g.float64 else g.float32
+                steps[i] = g.tensor(0., dtype=dtype, device=device)
+            else:
+                steps[i] = step
     self.n_step = max_step
     return None
 
@@ -721,6 +754,7 @@ def _initialize_adam(self, params, lr, args, kwargs, name):
     result = _initialize_default(self, params, lr, args, kwargs, name)
     for group in self.param_groups:
         group.setdefault('foreach', foreach)
+        group.setdefault('fused', getattr(self, 'fused', None))
         group['_torch_adam_params'] = tuple(group['params'])
     return result
 

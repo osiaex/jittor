@@ -20,6 +20,7 @@ from ..checkpoint_state import (
     get_model_state_dict, set_model_state_dict, get_state_dict, set_state_dict,
 )
 from ..fidelity import Fidelity, register_api_bindings
+from ..ddp_comm_hooks import install_ddp_comm_hooks
 from ...diagnostics import EXPECTED, swallowed
 from ...transaction import set_env, set_flag
 from ... import collectives as _collectives
@@ -1079,6 +1080,7 @@ def _install_distributed(g, registry=None):
         setattr(dist, sub, mod)
 
     dist.algorithms.__path__ = getattr(dist.algorithms, "__path__", [])
+    install_ddp_comm_hooks(registry_for(g, registry))
     const_mod = _modules.get("torch.distributed.constants")
     if const_mod is None:
         const_mod = _types.ModuleType("torch.distributed.constants")
@@ -1300,6 +1302,9 @@ def _install_distributed(g, registry=None):
     register_api_bindings(join_mod, "torch.distributed.algorithms.join",
         ("Join", "Joinable", "JoinHook"), Fidelity.UNIMPLEMENTED,
         "Import-compatible context and hooks do not implement uneven-input communication")
+    register_api_bindings(g.nn.parallel.DistributedDataParallel,
+        "torch.nn.parallel.DistributedDataParallel", ("register_comm_hook",),
+        Fidelity.UNIMPLEMENTED, "Custom communication hooks explicitly refuse; default native reduction remains available")
     register_api_bindings(checkpoint, "torch.distributed.checkpoint",
         ("load_state_dict", "save_state_dict", "load", "save", "FileSystemReader", "FileSystemWriter"),
         Fidelity.UNIMPLEMENTED, "Checkpoint I/O follows the existing explicit unsupported policy")

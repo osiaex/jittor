@@ -1,0 +1,201 @@
+{
+  "record_type": "portable copy; historical paths and GPU identifiers replaced only",
+  "new_execution": false,
+  "source": {
+    "lab_relative_path": "_state/trl-completion-20261026/smoke/final-acceptance-source-binding.json",
+    "bytes": 6814,
+    "sha256": "e03c083222a8b390f2d99efc0567340ade18a45b4319be6a35aa2f80fd00ee37"
+  },
+  "normalization": "Only path prefixes and historical GPU UUIDs are replaced with placeholders; hashes and numeric observations are historical values.",
+  "result": {
+    "recorded": 1793009269.1018658,
+    "status": "all execution gates passed on identical final runtime and producer sources",
+    "execution_commands": [
+      [
+        "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/bin/python",
+        "${JITTOR_REPO_ROOT}/tools/run_test_suite.py",
+        "--tier",
+        "smoke",
+        "--backend",
+        "cpu"
+      ],
+      [
+        "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/bin/python",
+        "${JITTOR_REPO_ROOT}/tools/run_test_suite.py",
+        "--tier",
+        "smoke",
+        "--backend",
+        "cpu",
+        "--session",
+        "torch"
+      ]
+    ],
+    "canonical_source_files": 3067,
+    "actual_native_session_exit": 0,
+    "actual_torch_session_exit": 0,
+    "original_combined_r7_exit": 1,
+    "original_combined_r7_admitted": false,
+    "scope_composition": "Original native-r7 actual exit0 plus complete maintained Torch-r8 actual exit0; no original failed receipt changed",
+    "only_changed_torch_owned_test": [
+      "tests/structure/runtime/test_runtime_composition_structure.py"
+    ],
+    "native_source_scope_unchanged": true,
+    "torch_source_inventory_complete_and_current": true,
+    "runtime_files": 1279,
+    "producer_files": 33,
+    "runtime_maps_identical_for_numerical_cpu16_cuda16_and_canonical": true,
+    "producer_maps_identical_for_numerical_cpu16_cuda16_and_canonical": true,
+    "runtime_map_digest_algorithm": "sha256(json.dumps(map,sort_keys=True,separators=(comma,colon)))",
+    "runtime_map_sha256": "de42c6f00de7750d79c1c201d3dda1ba6a6590dcdc51e86efe2a1c5ef7c4c579",
+    "smoke_sessions": {
+      "native": {
+        "counts": {
+          "passed": 4723,
+          "skipped": 2123,
+          "xfailed": 18,
+          "xpassed": 1
+        },
+        "raw_summary": "4723 passed, 2123 skipped, 18 xfailed, 1 xpassed, 5532 warnings in 418.25s (0:06:58)",
+        "skip_buckets": {
+          "insufficient-devices": 19,
+          "accelerator": 1783,
+          "backend": 10,
+          "mpi": 69,
+          "torch": 203,
+          "network": 9,
+          "manual": 2,
+          "opt-in": 11,
+          "declared": 0,
+          "environment": 17,
+          "other": 0
+        }
+      },
+      "torch": {
+        "counts": {
+          "passed": 4619,
+          "skipped": 1793,
+          "xfailed": 1
+        },
+        "raw_summary": "4619 passed, 1793 skipped, 1 xfailed, 34 warnings in 886.74s (0:14:46)",
+        "skip_buckets": {
+          "insufficient-devices": 1,
+          "accelerator": 1704,
+          "backend": 0,
+          "mpi": 27,
+          "torch": 11,
+          "network": 0,
+          "manual": 4,
+          "opt-in": 18,
+          "declared": 2,
+          "environment": 26,
+          "other": 0
+        }
+      }
+    },
+    "native_xpass_note": "One existing non-strict environment-dependent liveness XPASS is retained, not counted as a repaired defect; see native-xpass-source-audit.json",
+    "excluded_execution_scope": "Original CPU smoke: slow/manual selectors unchanged; accelerator and multi-rank prerequisites unavailable in this CPU session; the eight dedicated ecosystem profiles remain unselected and are not claimed as executed",
+    "cpu16": {
+      "root": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/cpu16-final-r3",
+      "exit_code": 0,
+      "outer_source_guard": true,
+      "status": "passed",
+      "selected": 16,
+      "denominator": 18,
+      "methods": 16,
+      "observations": 3700,
+      "all_numerical_pass": true,
+      "fallback": 0,
+      "grad_fields": 1236,
+      "parameter_fields": 1236,
+      "positive_gradient_steps": {
+        "torch": 48,
+        "jittor": 48
+      },
+      "nonzero_parameter_update_steps": {
+        "torch": 48,
+        "jittor": 48
+      },
+      "ppo": {
+        "fields": 375,
+        "all_pass": true,
+        "optimizer_steps": 3,
+        "generation_calls": 3
+      }
+    },
+    "cuda16": {
+      "root": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/final-cuda16-r4",
+      "status": "passed",
+      "selected": 16,
+      "denominator": 18,
+      "methods": 16,
+      "observations": 3697,
+      "all_numerical_pass": true,
+      "fallback": 0,
+      "grad_fields": 1236,
+      "parameter_fields": 1236,
+      "positive_gradient_steps": {
+        "torch": 48,
+        "jittor": 48
+      },
+      "nonzero_parameter_update_steps": {
+        "torch": 48,
+        "jittor": 48
+      },
+      "ppo": {
+        "fields": 375,
+        "all_pass": true,
+        "optimizer_steps": 3,
+        "generation_calls": 3
+      }
+    },
+    "stress": {
+      "receipt": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/maintained-boundary-pair-final-r4-receipt.json",
+      "repetitions": 128,
+      "async_before": 0,
+      "async_after": 448,
+      "fallback": 0,
+      "both_guards": true,
+      "both_exit_zero": true,
+      "both_runtime_maps_same": true
+    },
+    "numerical_status": "original_full_model_protocol_complete_byte_exact",
+    "historical_cuda719_first_fault": "still unattributed; passing gates and repaired causal shared defects do not identify the historical first fault",
+    "throughput": "separate final measurement still required",
+    "receipts": [
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/smoke/smoke-final-r7.json",
+        "sha256": "a35aec5d07463fe04122569acc20187867bea9f57982c0f4995f28ecaf245337"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/smoke/smoke-final-torch-r8.json",
+        "sha256": "fc26f8121048dee620b4dfa7b9498c2acc5ae54415380ef945b89894fbfe9d49"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/smoke/native-r7-torch-r8-scope-boundary.json",
+        "sha256": "8b2521bf34ff0103462dc39adb0f6209df28928022c8090c7802310d7870a31c"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/numerical/formal-r7/final-numerical-audit.json",
+        "sha256": "3431f26464d08adf303fd4235dde3696bef948cfbe16e52ae1c540fbd832fd00"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/numerical/formal-r7/source-protocol-budget-identity.json",
+        "sha256": "1262e68c9a487f93c9fbea9c64ae9dc481947eab3d93a3398d2dd46505b6f857"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/indexing/final-r7-cpu-cuda-audit.json",
+        "sha256": "4ef38e459879fd8cf6f654a94f960cabef8e1028d97a74c4ade357bd09a32733"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/smoke/completed-candidate-dedup-r6-r7-receipt.json",
+        "sha256": "093e3fc2d47ed1b254aaf8e92a29d8176b8eaedf414933726fbc8759e20cd264"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/smoke/native-xpass-source-audit.json",
+        "sha256": "6995e77e8a90edcf035995f7096737110ffec0643311a6ef8655bb8a5f70f94c"
+      }
+    ]
+  },
+  "handoff_code_snapshot": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+  "measurement_source_identity": "Use the original receipt, source guards and dated report. The handoff snapshot is not substituted for the measured source."
+}

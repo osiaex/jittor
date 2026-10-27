@@ -1,4 +1,5 @@
 """Torch numerical elementwise operations."""
+from ...amp import _autocast_fp32_call
 
 def log1p(x):
     """Compute ``log(1 + x)`` elementwise."""
@@ -6,6 +7,14 @@ def log1p(x):
         jt,
     )
     return jt.log(1.0 + x)
+
+
+def remainder(input, other, *, out=None):
+    """Expose native floor-modulo under Torch's public spelling."""
+    from . import jt
+    if out is not None:
+        raise NotImplementedError("remainder out= is not implemented")
+    return jt.mod(input, other)
 
 
 def reciprocal(x):
@@ -32,7 +41,7 @@ def softmax(input, dim=None, dtype=None, **kwargs):
     )
     if dtype is not None:
         input = input.cast(_dtype_to_str(dtype))
-    return jt.nn.softmax(input, dim=dim)
+    return _autocast_fp32_call(jt.nn.softmax, input, dim=dim, eligible=dtype is None)
 
 
 def log_softmax(input, dim=None, dtype=None, **kwargs):
@@ -47,7 +56,7 @@ def log_softmax(input, dim=None, dtype=None, **kwargs):
     )
     if dtype is not None:
         input = input.cast(_dtype_to_str(dtype))
-    return jt.nn.log_softmax(input, dim=dim)
+    return _autocast_fp32_call(jt.nn.log_softmax, input, dim=dim, eligible=dtype is None)
 
 
 def relu(input, **kwargs):

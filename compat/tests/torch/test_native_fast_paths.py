@@ -259,10 +259,12 @@ class TestFastViews(unittest.TestCase):
         np.testing.assert_array_equal(heads.numpy(), n.transpose(0, 2, 1, 3))
         np.testing.assert_array_equal(a.permute((3, 0, 2, 1)).numpy(), n.transpose(3, 0, 2, 1))
         np.testing.assert_array_equal(a.permute([1, 0, 3, 2]).numpy(), n.transpose(1, 0, 3, 2))
-        # Composed with the transpose it is a view of, and no transpose at
-        # all when the two cancel.
+        # Inverse permutations share storage and recover the original layout.
+        # Their AD nodes remain available to intermediate-gradient queries.
         back = heads.permute(0, 2, 1, 3)
-        self.assertNotEqual(back._producer_op(), "transpose")
+        self.assertTrue(back._storage_view_is_physical())
+        self.assertEqual(back.data_ptr(), a.data_ptr())
+        self.assertEqual(tuple(back.stride()), tuple(a.stride()))
         np.testing.assert_array_equal(back.numpy(), n)
         np.testing.assert_array_equal(heads.permute(1, 0, 3, 2).numpy(),
                                       n.transpose(2, 0, 3, 1))

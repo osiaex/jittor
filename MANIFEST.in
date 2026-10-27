@@ -473,6 +473,16 @@ include docs/results/2026-10-16-sgd-execution-options.md
 include docs/results/2026-10-16-transformers-main-source-training.md
 include docs/results/2026-10-16-transformers-maintained-cpu-nightly.md
 include docs/results/2026-10-16-verl-maintained-cpu-nightly.md
+include docs/results/2026-10-21-trl-dpo-grpo-qwen3.md
+include docs/results/2026-10-21-trl-qwen3-sft.md
+include docs/results/2026-10-22-trl-mainstream.md
+include docs/results/2026-10-22-trl-rounding-diagnosis.md
+include docs/results/2026-10-23-trl-full-and-practical.md
+include docs/results/2026-10-24-trl-local-fixes.md
+include docs/results/2026-10-25-trl-ppo-and-loss-determinism.md
+include docs/results/2026-10-25-trl-protocol-and-amp-opmath.md
+include docs/results/2026-10-25-trl-text-and-lora.md
+include docs/results/2026-10-26-trl-numerics-and-validation.md
 include docs/results/index.md
 include docs/tutorials/index.md
 include examples/README.md
@@ -981,6 +991,7 @@ include tools/run_metric_td_gate.py
 include tools/run_peft_gate.py
 include tools/run_test_suite.py
 include tools/run_transformers_gate.py
+include tools/run_trl_gate.py
 prune compat
 prune adapters
 prune build

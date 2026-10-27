@@ -11,6 +11,16 @@
 ```{toctree}
 :maxdepth: 1
 
+2026-10-26-trl-numerics-and-validation
+2026-10-25-trl-protocol-and-amp-opmath
+2026-10-25-trl-ppo-and-loss-determinism
+2026-10-25-trl-text-and-lora
+2026-10-24-trl-local-fixes
+2026-10-23-trl-full-and-practical
+2026-10-22-trl-rounding-diagnosis
+2026-10-22-trl-mainstream
+2026-10-21-trl-dpo-grpo-qwen3
+2026-10-21-trl-qwen3-sft
 2026-10-16-diffusers-maintained-cpu-nightly
 2026-10-16-h3-upstream-gradient-components
 2026-10-16-native-alias-lifecycle
@@ -127,6 +137,12 @@
 
 | 结论 | 状态 | 日期 |
 | --- | --- | --- |
+| [TRL PPO LoRA 与损失重复性](2026-10-25-trl-ppo-and-loss-determinism.md) | 完整 PPO LoRA 可运行；CE 归约及双卡重复/恢复修复，严格误差和偶发索引故障保留 | 2026-10-25 |
+| [TRL 文本方法、LoRA 与双卡验证](2026-10-25-trl-text-and-lora.md) | 修复模块精度与计步状态，补文本方法和实用配置；严格数值限制保留 | 2026-10-25 |
+| [TRL 本机修复与复验](2026-10-24-trl-local-fixes.md) | SGD 显存与 AMP 边界修复；完整模型数值与恢复差异仍保留 | 2026-10-24 |
+| [TRL 主流训练方法验证](2026-10-22-trl-mainstream.md) | 固定版本的 Trainer 清单与小型 Qwen3 训练对拍；范围和逐项结果见报告 | 2026-10-22 |
+| [TRL DPO/GRPO：Qwen3-0.6B 十样本训练](2026-10-21-trl-dpo-grpo-qwen3.md) | 完整模型的训练与数值对拍；严格容差和生成回放边界见报告 | 2026-10-21 |
+| [TRL SFTTrainer：完整 Qwen3-0.6B](2026-10-21-trl-qwen3-sft.md) | CPU/CUDA 各完成三步，严格数值对拍仍有 378/3 个字段未通过 | 2026-10-21 |
 | [Ascend 910B3：冷缓存启动、ACL 执行与 NPU 门禁](2026-08-28-ascend-910b-validation.md) | NPU 门禁 397 passed / 9 skipped；skip 对应的能力边界仍开放 | 2026-08-28，2026-09-01 复查 |
 | [Qwen3-0.6B 在 Ascend 910B3 上训练](2026-08-30-qwen3-ascend-training.md) | FP32 训练与 BF16 单步对齐接受；BF16 精确路径慢约 6%、训练轨迹未验收 | 2026-08-30，2026-09-02 |
 | [vLLM 在 Ascend 910B3 上经 Jittor 运行](2026-08-31-vllm-ascend-jittor-bootstrap.md) | 单请求 Qwen3-0.6B 正确且快 6.8%；外置 NPU 插件未入仓，多请求未测 | 2026-08-31，2026-09-02 |

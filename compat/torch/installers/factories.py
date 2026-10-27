@@ -9,6 +9,7 @@ Split out of the tensor installer, which it runs as part of.
 """
 from jittor._core.dtypes import dtype_name as _jittor_dtype_name
 
+from contextlib import nullcontext
 import functools
 import inspect
 from ..context import get_install_context
@@ -69,6 +70,10 @@ def _invoke_factory(name, args, kwargs):
         mean = kwargs.get("mean", args[0] if args else None)
         std = kwargs.get("std", args[1] if len(args) > 1 else None)
         like = mean if isinstance(mean, jt.Var) else std if isinstance(std, jt.Var) else None
+        if any(isinstance(value, jt.Var) and value.requires_grad for value in (mean, std)):
+            # Native normal is reparameterized; Torch's normal has zero mean/std
+            # derivatives. Do not expose the different native AD contract.
+            raise NotImplementedError("torch.normal with trainable mean/std tensors is not implemented")
     with tensor_frontend(context.target_namespace.Var, device=kwargs.get("device"), like=like):
         return implementation(*args, **kwargs)
 
@@ -260,6 +265,7 @@ def _constructor_adapter(name, orig, _accepts_dtype, *args, **kwargs):
         if native_shape:
             out = orig(*args)
             out._jittor_torch_ext_mutable = True
+            out.requires_grad_(False)
             return out
     # _invoke_factory already established native construction placement.
     _requires_grad = bool(kwargs.get("requires_grad", False))
@@ -271,7 +277,7 @@ def _constructor_adapter(name, orig, _accepts_dtype, *args, **kwargs):
     # Only for the factories that really take a shape: tril/triu take
     # the matrix to transform, and a 1x1 matrix holds a single element,
     # so shape conversion would collapse it into an integer dimension.
-    _takes_shape = not (name.endswith("_like") or name in _TENSOR_ARGUMENT)
+    _takes_shape = not (name.endswith("_like") or name in _TENSOR_ARGUMENT or name == "normal")
     if args and name == "arange":
         # arange takes bounds and a step, not dimensions: a 0-D float tensor
         # step (`1 / count`) must stay fractional, which `_shape_arg` would
@@ -285,7 +291,7 @@ def _constructor_adapter(name, orig, _accepts_dtype, *args, **kwargs):
                  (isinstance(args[0], tuple) and type(args[0]) is not tuple)):
         args = (tuple(int(x) for x in args[0]),) + tuple(args[1:])
     # Torch also allows shape via size=.
-    if "size" in kwargs and not args:
+    if "size" in kwargs and not args and name != "normal":
         sz = kwargs.pop("size")
         args = (tuple(sz),) if hasattr(sz, "__len__") else (sz,)
     # torch.full(size, fill_value=...) / full_like(input, fill_value=...):
@@ -324,7 +330,17 @@ def _constructor_adapter(name, orig, _accepts_dtype, *args, **kwargs):
             # ones_like / tril / triu have no dtype param in jittor; torch
             # accepts one. Pop it and cast the result instead.
             _cast_to = _dtype_to_str(kwargs.pop("dtype"))
-    out = orig(*args, **kwargs)
+    tensor_transform = name in _TENSOR_ARGUMENT or (name == "normal" and not fresh_leaf)
+    inputs = tuple(args) + tuple(kwargs.values())
+    stopped_transform = tensor_transform and not any(
+        isinstance(value, jt.Var) and value.requires_grad for value in inputs)
+    if name == "normal" and not fresh_leaf and "dtype" not in kwargs:
+        source = next(value for value in inputs if isinstance(value, jt.Var))
+        kwargs["dtype"] = _dtype_to_str(source.dtype)
+    # Native helpers may allocate differentiable temporaries (a triangular
+    # zero mask or a random sample). They are not user input gradient edges.
+    with jt.no_grad() if stopped_transform else nullcontext():
+        out = orig(*args, **kwargs)
     if _cast_to is not None:
         out = out.cast(_cast_to)
     if fresh_leaf:
@@ -332,9 +348,10 @@ def _constructor_adapter(name, orig, _accepts_dtype, *args, **kwargs):
         # nodes are not the history of a newly created Torch leaf.
         out = out.detach()
     out._jittor_torch_ext_mutable = True
-    out.requires_grad_(_requires_grad)
-    if _requires_grad:
-        _torch_register_leaf(out)
+    if not tensor_transform:
+        out.requires_grad_(_requires_grad)
+        if _requires_grad:
+            _torch_register_leaf(out)
     return out
 
 
@@ -492,7 +509,10 @@ def _draw_from_generator(name, generator, args, kwargs):
         distribution = "normal" if name.startswith("randn") else "uniform"
         t = jt.random(shape, cast_to, distribution, generator=native)
     elif name == "normal":
-        t = jt.normal(mean, std, size=shape, dtype=cast_to, generator=native)
+        stopped = not any(isinstance(value, jt.Var) and value.requires_grad
+                          for value in (mean, std))
+        with jt.no_grad() if stopped else nullcontext():
+            t = jt.normal(mean, std, size=shape, dtype=cast_to, generator=native)
     elif name == "randint":
         if "high" in kwargs:
             low = kwargs.get("low", values_args[0] if values_args else 0)
@@ -518,9 +538,10 @@ def _draw_from_generator(name, generator, args, kwargs):
         t = t.detach()
     t._jittor_torch_ext_mutable = True
     requires_grad = bool(kwargs.get("requires_grad", False))
-    t.requires_grad_(requires_grad)
-    if requires_grad:
-        _torch_register_leaf(t)
+    if name != "normal" or _creates_fresh_leaf(name, args, kwargs):
+        t.requires_grad_(requires_grad)
+        if requires_grad:
+            _torch_register_leaf(t)
     return t
 
 

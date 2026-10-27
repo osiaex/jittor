@@ -94,13 +94,36 @@ JIT_TEST(fused_op_relay_matmul) {
     context.setup(&fop);
     if (!has_op("mkl_matmul")) return;
     auto make_matmul = get_op_info("mkl_matmul")
-        .get_constructor<VarPtr, Var*, Var*, bool, bool>();
-    auto rvar = make_matmul(a, b, 0, 0);
+        .get_constructor<VarPtr, Var*, Var*, bool, bool, bool>();
+    auto rvar = make_matmul(a, b, false, false, false);
 
-    fop.context->vrm.add_relay_group(&fop, {{rvar, d}});
+    auto rid = fop.context->vrm.add_relay_group(&fop, {{rvar, d}});
+    CHECKop(rid,==,0);
     CHECKop(context.vrm.relay_groups[0].removed_input_vars.size(),==,2);
     auto is_op_relayed = context.vrm.get_op_relay_info(&fop, {1});
     for (auto v : is_op_relayed) CHECK(v.first==0 && v.second==0);
+
+    // Compile the fully relayed plan. The partial plan below deliberately
+    // retains a broadcast to check dependency/member mapping. Broadcasts are
+    // now physical storage views with no jit_run, so that synthetic partial
+    // plan is not one the native executor would put in a fused kernel.
+    auto& loop_options = fop.get_loop_options_tuned();
+    loop_options["relay0"] = 1;
+    OpCompiler oc(&fop);
+
+    // This test fills the inputs and checks the outputs through host pointers,
+    // so the storage has to be host memory. get_allocator() follows use_cuda,
+    // which is on by default whenever a GPU is present, and the assignments
+    // below would then write into device memory and fault.
+    auto allocator = cpu_allocator;
+    for (auto& v : fop.vars)
+        if (v.type!=1) v.var->alloc(allocator);
+    auto entry = oc.compile("«OP:_fused_op_relay_matmul", oc.src);
+    for (uint i=0; i<a->num; i++)
+        a->ptr<float>()[i] = b->ptr<float>()[i] = 1;
+    entry(&fop);
+    for (uint i=0; i<a->num; i++)
+        CHECK(d->ptr<float>()[i]==10);
 
     // test2
     for (uint i=0; i<var_fused.size(); i++) var_fused[i] = 0;
@@ -120,23 +143,7 @@ JIT_TEST(fused_op_relay_matmul) {
     CHECK(oprc.relayed_members[2]==fop.var_index.get(d.ptr));
     auto src = context.vrm.get_relay_src(0,0);
 
-    auto& loop_options = fop.get_loop_options_tuned();
-    loop_options["relay0"] = 1;
-    OpCompiler oc(&fop);
 
-    // This test fills the inputs and checks the outputs through host pointers,
-    // so the storage has to be host memory. get_allocator() follows use_cuda,
-    // which is on by default whenever a GPU is present, and the assignments
-    // below would then write into device memory and fault.
-    auto allocator = cpu_allocator;
-    for (auto& v : fop.vars)
-        if (v.type!=1) v.var->alloc(allocator);
-    auto entry = oc.compile("«OP:_fused_op_relay_matmul", oc.src);
-    for (uint i=0; i<a->num; i++)
-        a->ptr<float>()[i] = b->ptr<float>()[i] = 1;
-    entry(&fop);
-    for (uint i=0; i<a->num; i++)
-        CHECK(d->ptr<float>()[i]==10);
 }
 
 } // jittor

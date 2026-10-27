@@ -180,7 +180,20 @@ class NNFrontendOwner:
             "__init__": LayerInitializer(self, native),
             "_torch_native_layer": native,
         }
-        adapted = type(native.__name__, (native, self.Module), namespace)
+        bases = (native, self.Module)
+        if native is getattr(self.backend.nn, "Linear", None):
+            # Public Linear directly inherits Module in torch. A subclass
+            # using super(nn.Linear, self).__init__() must initialize only
+            # Module, rather than re-enter the native Linear constructor.
+            # Keep the native class in the MRO for isinstance, execute and
+            # native super() calls; LayerInitializer still calls its original
+            # constructor when public Linear itself is initialized.
+            implementation = type("_LinearImplementation", bases, {
+                "__module__": __name__, "__slots__": (),
+                "__init__": self.native_module.__init__,
+            })
+            bases = (implementation,)
+        adapted = type(native.__name__, bases, namespace)
         self.adapters[native] = adapted
         return adapted
 

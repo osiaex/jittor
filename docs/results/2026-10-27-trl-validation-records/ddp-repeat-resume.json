@@ -1,0 +1,223 @@
+{
+  "record_type": "portable copy; historical paths and GPU identifiers replaced only",
+  "new_execution": false,
+  "source": {
+    "lab_relative_path": "_state/trl-ddp-local-20261025/postfix-ddp-final-proof.json",
+    "bytes": 5709,
+    "sha256": "1b872d652f6972009bd60394dc8603da5007ae7fcfa4a1e54f37115d5c5a5b4f"
+  },
+  "normalization": "Only path prefixes and historical GPU UUIDs are replaced with placeholders; hashes and numeric observations are historical values.",
+  "result": {
+    "status": "measured DDP repeat and own-resume nondeterminism repaired; cross-runtime strict parity open",
+    "comparisons": {
+      "resume": {
+        "strict_passed": true,
+        "compared_fields": 2846,
+        "failed_fields": 0,
+        "max_abs": 0.0,
+        "sha256": "d457cc8557ada8ea597c3c474b20711991bec61afe96479df97fcf42b0321caa",
+        "failure_categories": {}
+      },
+      "repeat": {
+        "strict_passed": true,
+        "compared_fields": 5686,
+        "failed_fields": 0,
+        "max_abs": 0.0,
+        "sha256": "0c0d67426884766fbba26115ca42d75c8a80ada363bb988db8eaa280c029e48f",
+        "failure_categories": {}
+      },
+      "cross": {
+        "strict_passed": false,
+        "compared_fields": 5686,
+        "failed_fields": 13,
+        "max_abs": 0.00010728836059570312,
+        "sha256": "1072197e4b5643c9e6262d3069cf89dc8fe893f995f1b884bbed74817ad078cb",
+        "failure_categories": {
+          "final": 3,
+          "parameter": 10
+        }
+      }
+    },
+    "runs": {
+      "full": [
+        {
+          "rank": 0,
+          "steps": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "fallback_count": 0,
+          "device": "cuda:0",
+          "visible_devices": "0",
+          "driver_checks": 5260,
+          "manifest_sha256": "7170d930bf448adef3dc822740c8e62c4b5ed4102abf528fd8c18242186cecfd"
+        },
+        {
+          "rank": 1,
+          "steps": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "fallback_count": 0,
+          "device": "cuda:0",
+          "visible_devices": "1",
+          "driver_checks": 5260,
+          "manifest_sha256": "227ec3e4df46557da5f7971223e6ebcc057aac493b3b3c4d111b1bab9255aef8"
+        }
+      ],
+      "resume": [
+        {
+          "rank": 0,
+          "steps": [
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "fallback_count": 0,
+          "device": "cuda:0",
+          "visible_devices": "0",
+          "driver_checks": 4120,
+          "manifest_sha256": "72f3d0d5f140ac7a9644b44d17bd2c000ce5c430aa3cb8d1b549a15c8e950933"
+        },
+        {
+          "rank": 1,
+          "steps": [
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "fallback_count": 0,
+          "device": "cuda:0",
+          "visible_devices": "1",
+          "driver_checks": 4120,
+          "manifest_sha256": "71d3ccb70173c69cf48392a2be658cdb35ee825c43abc0f26838812439525ad1"
+        }
+      ],
+      "repeat": [
+        {
+          "rank": 0,
+          "steps": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "fallback_count": 0,
+          "device": "cuda:0",
+          "visible_devices": "0",
+          "driver_checks": 5260,
+          "manifest_sha256": "78d86f8f2821ab7951406257f819b82db9a89dd8dff157691591db39b1f0856e"
+        },
+        {
+          "rank": 1,
+          "steps": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "fallback_count": 0,
+          "device": "cuda:0",
+          "visible_devices": "1",
+          "driver_checks": 5260,
+          "manifest_sha256": "e8a9d814c59a61d6a0254ef61b4ee507c5c60fbb7844b095a11adbde1569c6e5"
+        }
+      ]
+    },
+    "final_next_logits": [
+      {
+        "passed": false,
+        "elements": 151936,
+        "mismatched_elements": 253,
+        "max_abs": 3.0517578125e-05,
+        "reference_l2": 1033.3957140677371,
+        "candidate_l2": 1033.3960059366286,
+        "difference_l2": 0.002921849958905746,
+        "relative_l2": 2.8274260470894737e-06,
+        "cosine": 0.999999999996043,
+        "exact": false,
+        "rmse": 7.495965278799467e-06,
+        "positions": 1,
+        "top1_matches": 1,
+        "top1_agreement": 1.0,
+        "mean_softmax_kl_torch_to_jittor": 2.4004480194199696e-11,
+        "max_softmax_kl_torch_to_jittor": 2.4004480194199696e-11
+      },
+      {
+        "passed": false,
+        "elements": 151936,
+        "mismatched_elements": 3861,
+        "max_abs": 0.00010728836059570312,
+        "reference_l2": 1424.9699161075646,
+        "candidate_l2": 1424.969508000095,
+        "difference_l2": 0.00990098480768006,
+        "relative_l2": 6.948206201240728e-06,
+        "cosine": 0.9999999999759024,
+        "exact": false,
+        "rmse": 2.540083830043269e-05,
+        "positions": 1,
+        "top1_matches": 1,
+        "top1_agreement": 1.0,
+        "mean_softmax_kl_torch_to_jittor": 1.995008176417743e-10,
+        "max_softmax_kl_torch_to_jittor": 1.995008176417743e-10
+      },
+      {
+        "passed": false,
+        "elements": 151936,
+        "mismatched_elements": 1048,
+        "max_abs": 5.91278076171875e-05,
+        "reference_l2": 1445.481632690219,
+        "candidate_l2": 1445.4814471234833,
+        "difference_l2": 0.005092474970101739,
+        "relative_l2": 3.523029871105327e-06,
+        "cosine": 0.9999999999938025,
+        "exact": false,
+        "rmse": 1.3064673441799204e-05,
+        "positions": 1,
+        "top1_matches": 1,
+        "top1_agreement": 1.0,
+        "mean_softmax_kl_torch_to_jittor": 3.483980381249434e-11,
+        "max_softmax_kl_torch_to_jittor": 3.483980381249434e-11
+      }
+    ],
+    "stage_receipt_sha256": "935c7aa32b96ac875a990282e2f53779558f3f773e624a6ede48ff60ed3ffa7b",
+    "ce_primitive_proof_sha256": "cb8e98cf38493e83b59bfdf0fc68985e54ed83c7fd550fce0e1f59cd7beaa914",
+    "preservation_proof_sha256": "db08a03f393f60c0f96fd4bae37dc505e68ff00183399705f7ece59bcad4bb7f",
+    "payload_bytes": 627804254,
+    "scope": "Unchanged official full28-layer FP32 Qwen3-0.6B SFT two-rank NCCL LoRA112,10updates,checkpoint5 freshresume,independent10update repeat; original strict/exact policies retained"
+  },
+  "handoff_code_snapshot": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+  "measurement_source_identity": "Use the original receipt, source guards and dated report. The handoff snapshot is not substituted for the measured source."
+}

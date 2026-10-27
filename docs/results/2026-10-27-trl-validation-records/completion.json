@@ -1,0 +1,85 @@
+{
+  "record_type": "portable copy; historical paths and GPU identifiers replaced only",
+  "new_execution": false,
+  "source": {
+    "lab_relative_path": "_state/trl-completion-20261026/final-completion-audit.json",
+    "bytes": 2688,
+    "sha256": "8ae89d060f71399a4416e50f2648af3999be25431e29b607a961583c68decf28"
+  },
+  "normalization": "Only path prefixes and historical GPU UUIDs are replaced with placeholders; hashes and numeric observations are historical values.",
+  "result": {
+    "recorded": 1793014852.1562023,
+    "status": "requested numerical and repository/performance acceptance completed; historical PPO719 first-fault attribution remains open",
+    "completed_requested_items": [
+      1,
+      3
+    ],
+    "partially_completed_requested_items": [
+      2
+    ],
+    "runtime_commit": "e7d070b0c039acc6d19eee5f81b3dfc73a4a84bb",
+    "documentation_commit": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+    "worktree_clean": true,
+    "pushed": false,
+    "measured_files_current_and_committed": 1340,
+    "numerical_total_byte_exact_fields": 16956,
+    "cpu_smoke_passed": 9342,
+    "cpu_smoke_skipped": 3916,
+    "cpu_smoke_xfailed": 19,
+    "cpu_smoke_xpassed": 1,
+    "full_structure_passed": 1528,
+    "full_structure_explained_skips": 4,
+    "late_accounting_controls_passed": 62,
+    "throughput_formal_rows": 18,
+    "throughput_priming_rows": 6,
+    "remaining_issue": "original CUDA PPO error719 not reproduced or causally bound to its first operator; shared scan/copy/graph defects repaired with separate causal controls",
+    "ruff": {
+      "baseline_differential_files": 118,
+      "added_issues": 0,
+      "later_changed_files_checked_clean": [
+        "tests/_helpers/pytest_policy.py",
+        "tests/tools/test_pytest_xdist_accounting.py"
+      ]
+    },
+    "receipts": [
+      {
+        "path": "numerical/formal-r7/final-numerical-audit.json",
+        "sha256": "3431f26464d08adf303fd4235dde3696bef948cfbe16e52ae1c540fbd832fd00"
+      },
+      {
+        "path": "indexing/final-r7-cpu-cuda-audit.json",
+        "sha256": "4ef38e459879fd8cf6f654a94f960cabef8e1028d97a74c4ade357bd09a32733"
+      },
+      {
+        "path": "indexing/historical-ppo-pair/fullprint-pair-audit.json",
+        "sha256": "6ca5e537caf2e112b4171484b46ba28827271a6cde48ebe4461eb34949b17b40"
+      },
+      {
+        "path": "smoke/final-acceptance-source-binding.json",
+        "sha256": "e03c083222a8b390f2d99efc0567340ade18a45b4319be6a35aa2f80fd00ee37"
+      },
+      {
+        "path": "smoke/late-mode-ledger-scope-proof.json",
+        "sha256": "77167c0c958ac6738d8489cf94a98b32b24c59dc464a2a8d828e9bcec3bf1c94"
+      },
+      {
+        "path": "smoke/mode-collection-ledger-green-r1.json",
+        "sha256": "b16b895402e7e2beb25eb7d49f140c5d20ba1ea67a3fcc72657a8ac6c9f7f93c"
+      },
+      {
+        "path": "smoke/precommit-structure-final-r2.json",
+        "sha256": "1502fd1213f4859075ae78b2d48745d6257cf9be1c826924939ebfc88a2e2695"
+      },
+      {
+        "path": "throughput-final-r7/final-throughput-audit.json",
+        "sha256": "7ccaad9b1a572cf33165f78a5ec584cae49e9deaee30f8b84695c7784001a460"
+      }
+    ],
+    "report": {
+      "path": "docs/results/2026-10-26-trl-numerics-and-validation.md",
+      "sha256": "3209e84848f828fbadc6107aafc79e2ff67ca97f3998e40477e32da0a7b0e813"
+    }
+  },
+  "handoff_code_snapshot": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+  "measurement_source_identity": "Use the original receipt, source guards and dated report. The handoff snapshot is not substituted for the measured source."
+}

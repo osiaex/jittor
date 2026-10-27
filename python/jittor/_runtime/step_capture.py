@@ -381,6 +381,10 @@ def refuse(reason):
     """The step being captured cannot be replayed; it keeps running as written."""
     if _ACTIVE is not None and _ACTIVE.refused is None:
         _ACTIVE.refused = reason
+        # Once refused, this call continues as an ordinary step. Imperative
+        # stores may sync its graph before returning; retaining that graph
+        # would recompute it against parameters those stores already changed.
+        jt.flags.keep_graph = 0
 
 
 class _Capture:
@@ -425,8 +429,9 @@ def _adopt(holder, old):
     if (tuple(holder.shape) != tuple(old.shape)
             or str(_native_dtype(holder)) != str(_native_dtype(old))):
         return False
-    old._copy_into(holder)
-    holder._update(old)
+    with jt.no_grad():
+        old._copy_into(holder)
+        holder._update(old)
     return True
 
 
@@ -531,7 +536,8 @@ class StepCapture:
 
         def private_copy(value):
             copy = _empty_like(value)
-            copy._copy_into(value)
+            with jt.no_grad():
+                copy._copy_into(value)
             return copy
         private_args, private_kwargs = _map_inputs((args, kwargs), private_copy)
 
@@ -608,9 +614,12 @@ class StepCapture:
         state = []
         for holder, old, new in records:
             inplace = old._mem_ptr_now == new._mem_ptr_now
-            if not inplace:
-                old._copy_into(new, False)
-            holder._update(old)
+            # Restore the already-executed optimizer state, without recording
+            # a user-visible in-place operation on its trainable leaf.
+            with jt.no_grad():
+                if not inplace:
+                    old._copy_into(new, False)
+                holder._update(old)
             state.append((holder, old, new, inplace))
         state = _write_back_in_graph(state, roots)
 
@@ -629,8 +638,9 @@ class StepCapture:
 
     def _results(self, cap, sources):
         outs = [_empty_like(o) for o in cap.outputs]
-        for out, src in zip(outs, sources):
-            out._copy_into(src, False)
+        with jt.no_grad():
+            for out, src in zip(outs, sources):
+                out._copy_into(src, False)
         return _rebuild(cap.template, outs)
 
     # -- guards --------------------------------------------------------
@@ -656,6 +666,7 @@ class StepCapture:
         return None
 
     # -- replay --------------------------------------------------------
+    @jt.no_grad()
     def _write_back(self, cap):
         for _, old, new, inplace in cap.state:
             if not inplace:
@@ -694,8 +705,9 @@ class StepCapture:
             try:
                 jt.sync(cap.roots, False, False)
                 self._write_back(cap)
-                for out, src in zip(outs, cap.outputs):
-                    out._copy_into(src, False)
+                with jt.no_grad():
+                    for out, src in zip(outs, cap.outputs):
+                        out._copy_into(src, False)
             finally:
                 handle = _core.graph_capture_end()
         except Exception as exc:            # a capture poisons its stream
@@ -717,8 +729,9 @@ class StepCapture:
             hook()
         if self._cuda_graph and cap.host_inputs:
             _core.graph_wait()
-        for captured, given in zip(cap.inputs, _input_vars((args, kwargs), [])):
-            captured._copy_into(given)
+        with jt.no_grad():
+            for captured, given in zip(cap.inputs, _input_vars((args, kwargs), [])):
+                captured._copy_into(given)
         if self._cuda_graph and not _core.graph_leaves_moved(self._cuda_graph):
             _core.graph_launch(self._cuda_graph)
             self.stats["graph"] += 1

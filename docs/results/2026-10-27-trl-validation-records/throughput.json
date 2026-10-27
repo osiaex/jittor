@@ -1,0 +1,657 @@
+{
+  "record_type": "portable copy; historical paths and GPU identifiers replaced only",
+  "new_execution": false,
+  "source": {
+    "lab_relative_path": "_state/trl-completion-20261026/throughput-final-r7/final-throughput-audit.json",
+    "bytes": 28308,
+    "sha256": "7ccaad9b1a572cf33165f78a5ec584cae49e9deaee30f8b84695c7784001a460"
+  },
+  "normalization": "Only path prefixes and historical GPU UUIDs are replaced with placeholders; hashes and numeric observations are historical values.",
+  "result": {
+    "status": "original_six_prime_eighteen_measure_complete_source_bound",
+    "bound_head": "e17ddf2b666ecf6127a331c72352174edd5d5b11",
+    "maintained_producer": "${JITTOR_REPO_ROOT}/agent/skills/torch-compat-repo-runbook/scripts/trl_throughput_probe.py",
+    "maintained_producer_sha256": "5f46bde035a974550f048e02dc661eae29cb31c3ff5b32cd45a5e63826863fe5",
+    "changed_original_command_arguments": [
+      "state"
+    ],
+    "runtime_and_producer_source_guard_files": 1340,
+    "dynamic_runtime_owner_inventory_files": 1271,
+    "all18_rows_valid": true,
+    "all18_rows_no_new_jit": true,
+    "all18_rows_zero_fallback": true,
+    "all18_rows_actual_optimizer_updates": 25,
+    "all18_rows_finite_parameter_states": 112,
+    "all18_rows_parameter_counters": 25,
+    "initial_parameter_and_buffer_hashes_per_row": 423,
+    "warmup_updates_per_row": 5,
+    "timed_updates_per_row": 20,
+    "timed_counts_per_row": {
+      "sequences": 40,
+      "nonpadding_tokens": 3352,
+      "causal_target_tokens": 3312
+    },
+    "paired_repetitions": 3,
+    "prime_receipts": [
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/prime-fp32-torch-r0/result.json",
+        "sha256": "ffb0e9dc22ae8d80cfaff80c933c948f7c96cc794c025f1e99f43576f90062bf"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/prime-fp32-jittor-r0/result.json",
+        "sha256": "760994c3d118bc375b5abcbc394bc8e28d59b04a6d82925b589f088b4713dfdb"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/prime-fp16-torch-r0/result.json",
+        "sha256": "17346b177eb324c77d85ae86d88f018d15c6f4240a7bbe44c95772ed7ac9d016"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/prime-fp16-jittor-r0/result.json",
+        "sha256": "96cd74b0d3a9ffcc4d6ea3c34ca7cfacc452a2eca5693f5881a742b8c2c73bce"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/prime-bf16-torch-r0/result.json",
+        "sha256": "83df827d2b2d5b305c8d64dcda4b30a193c59a69b30a5f33689b93527dfa7ae4"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/prime-bf16-jittor-r0/result.json",
+        "sha256": "0914f8e81d13b4364e62256c0956426dff4db734039f331136f8d647a259f99e"
+      }
+    ],
+    "measurement_receipts": [
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-fp32-torch-r0/result.json",
+        "sha256": "80b2a11ed32ed6f3f143cce8272db7bc96938c04ee0a65924ce9e453f9c9773b",
+        "runtime": "torch",
+        "precision": "fp32",
+        "repeat": 0,
+        "seconds": 5.903739647939801,
+        "nonpadding_tokens_per_second": 567.7757150367786,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/oracle/lib/python3.11/site-packages/torch/_C.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "2bc75a585fddb2838faa1ade78aa0299cbe7d7ae6c2933f6b331a5ef2ed65565"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-fp32-jittor-r0/result.json",
+        "sha256": "0f5efe659e317716b529b9bdcb7e6f9992f7e0b32b417b8e1ebc371c20af35e4",
+        "runtime": "jittor",
+        "precision": "fp32",
+        "repeat": 0,
+        "seconds": 9.263165296986699,
+        "nonpadding_tokens_per_second": 361.8633471962768,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-local-fixes/amp-jit-gpu1/.cache/jittor/jt2.0/g++11.4.0/py3.11.17/Linux-5.4.0-18x8b/archd827a10001/bbc63178bec1/default/cfg08ac6be4/cu12.8.93_sm_75/jittor_core.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "8266ed13d3f23f183d53efe9580043e135034aa59bf090bdf83dc6218fb2b0ea"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-fp32-jittor-r1/result.json",
+        "sha256": "227efd91cef5051c7438ea8b84b3f3b6c5c47d2183a80fe6085d0dc851af8e35",
+        "runtime": "jittor",
+        "precision": "fp32",
+        "repeat": 1,
+        "seconds": 9.080839239060879,
+        "nonpadding_tokens_per_second": 369.12887804262647,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-local-fixes/amp-jit-gpu1/.cache/jittor/jt2.0/g++11.4.0/py3.11.17/Linux-5.4.0-18x8b/archd827a10001/bbc63178bec1/default/cfg08ac6be4/cu12.8.93_sm_75/jittor_core.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "8266ed13d3f23f183d53efe9580043e135034aa59bf090bdf83dc6218fb2b0ea"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-fp32-torch-r1/result.json",
+        "sha256": "e37f5e96e5dcefc1242a178ab7c3409c3784cd9ac8310e47b89d16040c25e289",
+        "runtime": "torch",
+        "precision": "fp32",
+        "repeat": 1,
+        "seconds": 5.8743339236825705,
+        "nonpadding_tokens_per_second": 570.6178851165239,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/oracle/lib/python3.11/site-packages/torch/_C.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "2bc75a585fddb2838faa1ade78aa0299cbe7d7ae6c2933f6b331a5ef2ed65565"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-fp32-torch-r2/result.json",
+        "sha256": "0544e894341c29ad56970dca96200adecccb987da8f3e61219081f1e50d34323",
+        "runtime": "torch",
+        "precision": "fp32",
+        "repeat": 2,
+        "seconds": 6.009658399969339,
+        "nonpadding_tokens_per_second": 557.7688076275853,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/oracle/lib/python3.11/site-packages/torch/_C.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "2bc75a585fddb2838faa1ade78aa0299cbe7d7ae6c2933f6b331a5ef2ed65565"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-fp32-jittor-r2/result.json",
+        "sha256": "390a18be6e16d73bb96145d6fa3d636b313cc659885c9ff00505883477013cbe",
+        "runtime": "jittor",
+        "precision": "fp32",
+        "repeat": 2,
+        "seconds": 9.352382753044367,
+        "nonpadding_tokens_per_second": 358.41133628848377,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-local-fixes/amp-jit-gpu1/.cache/jittor/jt2.0/g++11.4.0/py3.11.17/Linux-5.4.0-18x8b/archd827a10001/bbc63178bec1/default/cfg08ac6be4/cu12.8.93_sm_75/jittor_core.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "8266ed13d3f23f183d53efe9580043e135034aa59bf090bdf83dc6218fb2b0ea"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-fp16-jittor-r0/result.json",
+        "sha256": "41557b5747d89ad4ae0ce88606bdfa73630b65d5e2fdcfb947ce2a59abdf5ad2",
+        "runtime": "jittor",
+        "precision": "fp16",
+        "repeat": 0,
+        "seconds": 11.09178477153182,
+        "nonpadding_tokens_per_second": 302.20564760715916,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-local-fixes/amp-jit-gpu1/.cache/jittor/jt2.0/g++11.4.0/py3.11.17/Linux-5.4.0-18x8b/archd827a10001/bbc63178bec1/default/cfg08ac6be4/cu12.8.93_sm_75/jittor_core.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "8266ed13d3f23f183d53efe9580043e135034aa59bf090bdf83dc6218fb2b0ea"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-fp16-torch-r0/result.json",
+        "sha256": "f2e67f5eab4a15f379603af70e722eb6365241bfabfd40a8f2aae096d300ff5a",
+        "runtime": "torch",
+        "precision": "fp16",
+        "repeat": 0,
+        "seconds": 7.417602602392435,
+        "nonpadding_tokens_per_second": 451.8980295491785,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/oracle/lib/python3.11/site-packages/torch/_C.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "2bc75a585fddb2838faa1ade78aa0299cbe7d7ae6c2933f6b331a5ef2ed65565"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-fp16-torch-r1/result.json",
+        "sha256": "d973b4d08cbf398654262d96b0a62998730da50a12e53775a08358a3cc3b9427",
+        "runtime": "torch",
+        "precision": "fp16",
+        "repeat": 1,
+        "seconds": 6.946083307266235,
+        "nonpadding_tokens_per_second": 482.5741143204406,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/oracle/lib/python3.11/site-packages/torch/_C.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "2bc75a585fddb2838faa1ade78aa0299cbe7d7ae6c2933f6b331a5ef2ed65565"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-fp16-jittor-r1/result.json",
+        "sha256": "2ac53b28b8ade0aa687ff0d80651c5627307c1d3f4f3231fb2064cac55a30a59",
+        "runtime": "jittor",
+        "precision": "fp16",
+        "repeat": 1,
+        "seconds": 11.3227495290339,
+        "nonpadding_tokens_per_second": 296.04116839331033,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-local-fixes/amp-jit-gpu1/.cache/jittor/jt2.0/g++11.4.0/py3.11.17/Linux-5.4.0-18x8b/archd827a10001/bbc63178bec1/default/cfg08ac6be4/cu12.8.93_sm_75/jittor_core.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "8266ed13d3f23f183d53efe9580043e135034aa59bf090bdf83dc6218fb2b0ea"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-fp16-jittor-r2/result.json",
+        "sha256": "31d0497c2c1edbd20fd575ea8f7cec8881392bfee21ea7f742f0150c5f423278",
+        "runtime": "jittor",
+        "precision": "fp16",
+        "repeat": 2,
+        "seconds": 11.000187575817108,
+        "nonpadding_tokens_per_second": 304.7220765006827,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-local-fixes/amp-jit-gpu1/.cache/jittor/jt2.0/g++11.4.0/py3.11.17/Linux-5.4.0-18x8b/archd827a10001/bbc63178bec1/default/cfg08ac6be4/cu12.8.93_sm_75/jittor_core.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "8266ed13d3f23f183d53efe9580043e135034aa59bf090bdf83dc6218fb2b0ea"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-fp16-torch-r2/result.json",
+        "sha256": "d6330e294fbdedb5ad2d143faaef81e3bb54bc8f5796157f120c4ee9147fc9aa",
+        "runtime": "torch",
+        "precision": "fp16",
+        "repeat": 2,
+        "seconds": 8.045382931828499,
+        "nonpadding_tokens_per_second": 416.6364768964677,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/oracle/lib/python3.11/site-packages/torch/_C.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "2bc75a585fddb2838faa1ade78aa0299cbe7d7ae6c2933f6b331a5ef2ed65565"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-bf16-torch-r0/result.json",
+        "sha256": "6691f503587afb62b7d93a2b5ccade95b4ac3271935d41b600f4fd3644fa7e9f",
+        "runtime": "torch",
+        "precision": "bf16",
+        "repeat": 0,
+        "seconds": 7.3107459507882595,
+        "nonpadding_tokens_per_second": 458.50314353196484,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/oracle/lib/python3.11/site-packages/torch/_C.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "2bc75a585fddb2838faa1ade78aa0299cbe7d7ae6c2933f6b331a5ef2ed65565"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-bf16-jittor-r0/result.json",
+        "sha256": "a83067ce789639984a1acf59a80a0f93c0caa58730c8cc1eec0fb054179de762",
+        "runtime": "jittor",
+        "precision": "bf16",
+        "repeat": 0,
+        "seconds": 12.630497053265572,
+        "nonpadding_tokens_per_second": 265.3893972552214,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-local-fixes/amp-jit-gpu1/.cache/jittor/jt2.0/g++11.4.0/py3.11.17/Linux-5.4.0-18x8b/archd827a10001/bbc63178bec1/default/cfg08ac6be4/cu12.8.93_sm_75/jittor_core.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "8266ed13d3f23f183d53efe9580043e135034aa59bf090bdf83dc6218fb2b0ea"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-bf16-jittor-r1/result.json",
+        "sha256": "965dd6711cde77d9a9257ed204bc0d1b200dc31378d626d28e02964d4ff16d3d",
+        "runtime": "jittor",
+        "precision": "bf16",
+        "repeat": 1,
+        "seconds": 12.429608304053545,
+        "nonpadding_tokens_per_second": 269.6786510084027,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-local-fixes/amp-jit-gpu1/.cache/jittor/jt2.0/g++11.4.0/py3.11.17/Linux-5.4.0-18x8b/archd827a10001/bbc63178bec1/default/cfg08ac6be4/cu12.8.93_sm_75/jittor_core.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "8266ed13d3f23f183d53efe9580043e135034aa59bf090bdf83dc6218fb2b0ea"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-bf16-torch-r1/result.json",
+        "sha256": "95862f8bb62858bb79dd281594e2a60c028de41166ea71cd94058e12f3fa3402",
+        "runtime": "torch",
+        "precision": "bf16",
+        "repeat": 1,
+        "seconds": 6.845130883157253,
+        "nonpadding_tokens_per_second": 489.6911479439705,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/oracle/lib/python3.11/site-packages/torch/_C.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "2bc75a585fddb2838faa1ade78aa0299cbe7d7ae6c2933f6b331a5ef2ed65565"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-bf16-torch-r2/result.json",
+        "sha256": "898f2b514b08827e24eb467556d132e7fa1c9620c7172a7cf972ff17d5f3b293",
+        "runtime": "torch",
+        "precision": "bf16",
+        "repeat": 2,
+        "seconds": 6.9125749208033085,
+        "nonpadding_tokens_per_second": 484.9133699675641,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/oracle/lib/python3.11/site-packages/torch/_C.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "2bc75a585fddb2838faa1ade78aa0299cbe7d7ae6c2933f6b331a5ef2ed65565"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      },
+      {
+        "path": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/throughput-final-r7/measure-bf16-jittor-r2/result.json",
+        "sha256": "374a962b112d8e8db14e6f12bc2125d61d01fe3c156ca32baa195b968aefb27c",
+        "runtime": "jittor",
+        "precision": "bf16",
+        "repeat": 2,
+        "seconds": 12.893857218325138,
+        "nonpadding_tokens_per_second": 259.9687543643679,
+        "actual_optimizer_updates": 25,
+        "all112_parameter_counters": 25,
+        "finite112_states": true,
+        "no_new_jit": true,
+        "fallback_count": 0,
+        "compiled_core": {
+          "path": "${JITTOR_LAB_ROOT}/_state/trl-local-fixes/amp-jit-gpu1/.cache/jittor/jt2.0/g++11.4.0/py3.11.17/Linux-5.4.0-18x8b/archd827a10001/bbc63178bec1/default/cfg08ac6be4/cu12.8.93_sm_75/jittor_core.cpython-311-x86_64-linux-gnu.so",
+          "sha256": "8266ed13d3f23f183d53efe9580043e135034aa59bf090bdf83dc6218fb2b0ea"
+        },
+        "physical_gpu_uuid": "${HISTORICAL_GPU_UUID}"
+      }
+    ],
+    "summary": {
+      "status": "matched_official_trainer_throughput_only",
+      "profiles": {
+        "fp32": {
+          "runtimes": {
+            "torch": {
+              "seconds": [
+                5.903739647939801,
+                5.8743339236825705,
+                6.009658399969339
+              ],
+              "median_seconds": 5.903739647939801,
+              "updates_per_second": {
+                "median": 3.3876832639425927,
+                "minimum": 3.327976179162203,
+                "maximum": 3.404641319311002
+              },
+              "nonpadding_tokens_per_second": {
+                "median": 567.7757150367786,
+                "minimum": 557.7688076275853,
+                "maximum": 570.6178851165239
+              }
+            },
+            "jittor": {
+              "seconds": [
+                9.263165296986699,
+                9.080839239060879,
+                9.352382753044367
+              ],
+              "median_seconds": 9.263165296986699,
+              "updates_per_second": {
+                "median": 2.159089183748668,
+                "minimum": 2.138492459955154,
+                "maximum": 2.2024396064595853
+              },
+              "nonpadding_tokens_per_second": {
+                "median": 361.8633471962768,
+                "minimum": 358.41133628848377,
+                "maximum": 369.12887804262647
+              }
+            }
+          },
+          "jittor_over_torch_throughput": 0.6373350208767498
+        },
+        "fp16": {
+          "runtimes": {
+            "torch": {
+              "seconds": [
+                7.417602602392435,
+                6.946083307266235,
+                8.045382931828499
+              ],
+              "median_seconds": 7.417602602392435,
+              "updates_per_second": {
+                "median": 2.6962889591239767,
+                "minimum": 2.4858978335111437,
+                "maximum": 2.8793204911720798
+              },
+              "nonpadding_tokens_per_second": {
+                "median": 451.8980295491785,
+                "minimum": 416.6364768964677,
+                "maximum": 482.5741143204406
+              }
+            },
+            "jittor": {
+              "seconds": [
+                11.09178477153182,
+                11.3227495290339,
+                11.000187575817108
+              ],
+              "median_seconds": 11.09178477153182,
+              "updates_per_second": {
+                "median": 1.80313632223842,
+                "minimum": 1.7663554200078182,
+                "maximum": 1.8181508144432141
+              },
+              "nonpadding_tokens_per_second": {
+                "median": 302.20564760715916,
+                "minimum": 296.04116839331033,
+                "maximum": 304.7220765006827
+              }
+            }
+          },
+          "jittor_over_torch_throughput": 0.6687474338152014
+        },
+        "bf16": {
+          "runtimes": {
+            "torch": {
+              "seconds": [
+                7.3107459507882595,
+                6.845130883157253,
+                6.9125749208033085
+              ],
+              "median_seconds": 6.9125749208033085,
+              "updates_per_second": {
+                "median": 2.8932778637682826,
+                "minimum": 2.7356989470880957,
+                "maximum": 2.921784892267127
+              },
+              "nonpadding_tokens_per_second": {
+                "median": 484.9133699675641,
+                "minimum": 458.50314353196484,
+                "maximum": 489.6911479439705
+              }
+            },
+            "jittor": {
+              "seconds": [
+                12.630497053265572,
+                12.429608304053545,
+                12.893857218325138
+              ],
+              "median_seconds": 12.630497053265572,
+              "updates_per_second": {
+                "median": 1.583468957370056,
+                "minimum": 1.5511262193578037,
+                "maximum": 1.6090611635346224
+              },
+              "nonpadding_tokens_per_second": {
+                "median": 265.3893972552214,
+                "minimum": 259.9687543643679,
+                "maximum": 269.6786510084027
+              }
+            }
+          },
+          "jittor_over_torch_throughput": 0.5472923901293406
+        }
+      },
+      "limitations": [
+        "Synchronized Trainer-update interval excludes the initial CUDA-prefetched accumulation group and lookahead; later in-loop loading/H2D and stock metrics remain included. Not complete end-to-end input latency.",
+        "No accuracy/convergence claim; no allocator-memory comparison.",
+        "No new Jittor JIT shared objects in measured intervals; library tuning has no comparable public counter."
+      ]
+    },
+    "post_timing_logits_diagnostic_only": {
+      "fp32": {
+        "torch": [
+          {
+            "repeat": 0,
+            "final_next_logits_hash": "9d0b943c3dcd16b21d1963dc5dca553c99c201662204ed8e2b91825bead46eb2",
+            "final_next_argmax": 220
+          },
+          {
+            "repeat": 1,
+            "final_next_logits_hash": "9d0b943c3dcd16b21d1963dc5dca553c99c201662204ed8e2b91825bead46eb2",
+            "final_next_argmax": 220
+          },
+          {
+            "repeat": 2,
+            "final_next_logits_hash": "9d0b943c3dcd16b21d1963dc5dca553c99c201662204ed8e2b91825bead46eb2",
+            "final_next_argmax": 220
+          }
+        ],
+        "jittor": [
+          {
+            "repeat": 0,
+            "final_next_logits_hash": "771bd1d437e7f5a36d7d3ba2965022e6aa703d326bf118a11ffe5f1650f9966a",
+            "final_next_argmax": 220
+          },
+          {
+            "repeat": 1,
+            "final_next_logits_hash": "771bd1d437e7f5a36d7d3ba2965022e6aa703d326bf118a11ffe5f1650f9966a",
+            "final_next_argmax": 220
+          },
+          {
+            "repeat": 2,
+            "final_next_logits_hash": "771bd1d437e7f5a36d7d3ba2965022e6aa703d326bf118a11ffe5f1650f9966a",
+            "final_next_argmax": 220
+          }
+        ]
+      },
+      "fp16": {
+        "torch": [
+          {
+            "repeat": 0,
+            "final_next_logits_hash": "e02fb7346999dcbf8a222fa87139666a0ec168ba109e063f7551d1a48d136690",
+            "final_next_argmax": 220
+          },
+          {
+            "repeat": 1,
+            "final_next_logits_hash": "e02fb7346999dcbf8a222fa87139666a0ec168ba109e063f7551d1a48d136690",
+            "final_next_argmax": 220
+          },
+          {
+            "repeat": 2,
+            "final_next_logits_hash": "e02fb7346999dcbf8a222fa87139666a0ec168ba109e063f7551d1a48d136690",
+            "final_next_argmax": 220
+          }
+        ],
+        "jittor": [
+          {
+            "repeat": 0,
+            "final_next_logits_hash": "bbde1e77bad6ee0e76fc242ee20e70dbbdc2efc05c5b316fafc9c2222f84c912",
+            "final_next_argmax": 220
+          },
+          {
+            "repeat": 1,
+            "final_next_logits_hash": "bbde1e77bad6ee0e76fc242ee20e70dbbdc2efc05c5b316fafc9c2222f84c912",
+            "final_next_argmax": 220
+          },
+          {
+            "repeat": 2,
+            "final_next_logits_hash": "bbde1e77bad6ee0e76fc242ee20e70dbbdc2efc05c5b316fafc9c2222f84c912",
+            "final_next_argmax": 220
+          }
+        ]
+      },
+      "bf16": {
+        "torch": [
+          {
+            "repeat": 0,
+            "final_next_logits_hash": "09c820f471aee63f8c39e20fc6c58463a76ed769e0113f0103604737cf6d032f",
+            "final_next_argmax": 220
+          },
+          {
+            "repeat": 1,
+            "final_next_logits_hash": "09c820f471aee63f8c39e20fc6c58463a76ed769e0113f0103604737cf6d032f",
+            "final_next_argmax": 220
+          },
+          {
+            "repeat": 2,
+            "final_next_logits_hash": "09c820f471aee63f8c39e20fc6c58463a76ed769e0113f0103604737cf6d032f",
+            "final_next_argmax": 220
+          }
+        ],
+        "jittor": [
+          {
+            "repeat": 0,
+            "final_next_logits_hash": "09c820f471aee63f8c39e20fc6c58463a76ed769e0113f0103604737cf6d032f",
+            "final_next_argmax": 220
+          },
+          {
+            "repeat": 1,
+            "final_next_logits_hash": "09c820f471aee63f8c39e20fc6c58463a76ed769e0113f0103604737cf6d032f",
+            "final_next_argmax": 220
+          },
+          {
+            "repeat": 2,
+            "final_next_logits_hash": "09c820f471aee63f8c39e20fc6c58463a76ed769e0113f0103604737cf6d032f",
+            "final_next_argmax": 220
+          }
+        ]
+      }
+    },
+    "correctness_evidence": "${JITTOR_LAB_ROOT}/_state/trl-completion-20261026/numerical/formal-r7/final-numerical-audit.json",
+    "correctness_evidence_sha256": "3431f26464d08adf303fd4235dde3696bef948cfbe16e52ae1c540fbd832fd00",
+    "launch_plan_sha256": "4f72d93449b3f6563f22c33474838f9916452ee399837f083e490c61f05ff922",
+    "outer_receipt_sha256": "0dba9432308197fae80dc365d848576325416f30e2478fd565a78eb0829e3580",
+    "summary_sha256": "400a63eced834a900b335c170119f0dfc2988a56898331430ccc380b54312254",
+    "audit_script_sha256": "9b9ae2070f54f11b41285330332f2f2d31e1cc551b27f0e5120dae9b43cc40d9"
+  },
+  "handoff_code_snapshot": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+  "measurement_source_identity": "Use the original receipt, source guards and dated report. The handoff snapshot is not substituted for the measured source."
+}

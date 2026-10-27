@@ -1,0 +1,191 @@
+{
+  "record_type": "portable copy; historical paths and GPU identifiers replaced only",
+  "new_execution": false,
+  "source": {
+    "lab_relative_path": "_state/trl-ddp-local-20261025/ppo-generation-bounded-investigation-receipt.json",
+    "bytes": 7316,
+    "sha256": "f778b7bb2efea881149f7e85df220f27b0c51f4f76aa7ecea0baef3e385ae2e7"
+  },
+  "normalization": "Only path prefixes and historical GPU UUIDs are replaced with placeholders; hashes and numeric observations are historical values.",
+  "result": {
+    "status": "bounded_controls_complete_original_failure_unresolved",
+    "original_gate_failure": "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/postfix-cuda16-gate-r2/logs/ppo-jittor.log",
+    "exact_environment_five_repeats": [
+      {
+        "label": "ppo-generation-exact-gate-env-r3",
+        "command": [
+          "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/bin/python",
+          "-u",
+          "${JITTOR_REPO_ROOT}/agent/skills/torch-compat-repo-runbook/scripts/trl_mainstream_probe.py",
+          "--root",
+          "${JITTOR_REPO_ROOT}",
+          "--upstream",
+          "${JITTOR_LAB_ROOT}/trl-qwen3-sft/upstream",
+          "--output",
+          "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/ppo-generation-exact-gate-env-r3",
+          "--runtime",
+          "jittor",
+          "--device",
+          "cuda",
+          "--algorithm",
+          "ppo",
+          "--steps",
+          "3",
+          "--reference",
+          "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/postfix-cuda16-gate-r2/measurements/ppo/torch/trace"
+        ],
+        "exit_code": 0,
+        "seconds": 10.135845184326172
+      },
+      {
+        "label": "ppo-generation-exact-gate-env-r4",
+        "command": [
+          "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/bin/python",
+          "-u",
+          "${JITTOR_REPO_ROOT}/agent/skills/torch-compat-repo-runbook/scripts/trl_mainstream_probe.py",
+          "--root",
+          "${JITTOR_REPO_ROOT}",
+          "--upstream",
+          "${JITTOR_LAB_ROOT}/trl-qwen3-sft/upstream",
+          "--output",
+          "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/ppo-generation-exact-gate-env-r4",
+          "--runtime",
+          "jittor",
+          "--device",
+          "cuda",
+          "--algorithm",
+          "ppo",
+          "--steps",
+          "3",
+          "--reference",
+          "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/postfix-cuda16-gate-r2/measurements/ppo/torch/trace"
+        ],
+        "exit_code": 0,
+        "seconds": 9.904758214950562
+      },
+      {
+        "label": "ppo-generation-exact-gate-env-r5",
+        "command": [
+          "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/bin/python",
+          "-u",
+          "${JITTOR_REPO_ROOT}/agent/skills/torch-compat-repo-runbook/scripts/trl_mainstream_probe.py",
+          "--root",
+          "${JITTOR_REPO_ROOT}",
+          "--upstream",
+          "${JITTOR_LAB_ROOT}/trl-qwen3-sft/upstream",
+          "--output",
+          "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/ppo-generation-exact-gate-env-r5",
+          "--runtime",
+          "jittor",
+          "--device",
+          "cuda",
+          "--algorithm",
+          "ppo",
+          "--steps",
+          "3",
+          "--reference",
+          "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/postfix-cuda16-gate-r2/measurements/ppo/torch/trace"
+        ],
+        "exit_code": 0,
+        "seconds": 9.933023691177368
+      },
+      {
+        "label": "ppo-generation-exact-gate-env-r6",
+        "command": [
+          "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/bin/python",
+          "-u",
+          "${JITTOR_REPO_ROOT}/agent/skills/torch-compat-repo-runbook/scripts/trl_mainstream_probe.py",
+          "--root",
+          "${JITTOR_REPO_ROOT}",
+          "--upstream",
+          "${JITTOR_LAB_ROOT}/trl-qwen3-sft/upstream",
+          "--output",
+          "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/ppo-generation-exact-gate-env-r6",
+          "--runtime",
+          "jittor",
+          "--device",
+          "cuda",
+          "--algorithm",
+          "ppo",
+          "--steps",
+          "3",
+          "--reference",
+          "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/postfix-cuda16-gate-r2/measurements/ppo/torch/trace"
+        ],
+        "exit_code": 0,
+        "seconds": 10.27437138557434
+      },
+      {
+        "label": "ppo-generation-exact-gate-env-r7",
+        "command": [
+          "${JITTOR_LAB_ROOT}/_state/trl-qwen3-sft/candidate/bin/python",
+          "-u",
+          "${JITTOR_REPO_ROOT}/agent/skills/torch-compat-repo-runbook/scripts/trl_mainstream_probe.py",
+          "--root",
+          "${JITTOR_REPO_ROOT}",
+          "--upstream",
+          "${JITTOR_LAB_ROOT}/trl-qwen3-sft/upstream",
+          "--output",
+          "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/ppo-generation-exact-gate-env-r7",
+          "--runtime",
+          "jittor",
+          "--device",
+          "cuda",
+          "--algorithm",
+          "ppo",
+          "--steps",
+          "3",
+          "--reference",
+          "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/postfix-cuda16-gate-r2/measurements/ppo/torch/trace"
+        ],
+        "exit_code": 0,
+        "seconds": 10.027353048324585
+      }
+    ],
+    "metadata_observer": {
+      "manifest": "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/ppo-generation-index-metadata-r1/manifest.json",
+      "events": "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/ppo-index-metadata-r1.jsonl",
+      "events_sha256": "a37af7532f4a12b9a79364f0b31769d6afc284f4e4be7d4028a9a22f52516121"
+    },
+    "public_mask_pair": [
+      {
+        "runtime": "torch",
+        "repetitions": 64,
+        "all_exact": true,
+        "fallback_count": 0,
+        "result": "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/public-mask-torch-r2/result.json",
+        "sha256": "3d1b488234c512573c9fa88e0750c16630ae37f3d73669546dbdb34ff58cf857",
+        "arrays_sha256": "c84f8e4d507085c12fe0b1b0af752aa076aa67aefb781274618cb84592b5c98a"
+      },
+      {
+        "runtime": "jittor",
+        "repetitions": 64,
+        "all_exact": true,
+        "fallback_count": 0,
+        "result": "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/public-mask-jittor-r2/result.json",
+        "sha256": "f6cef93db1d44878684a2dc017f58e7d9dda28f30b008ac7968315a7e499ae18",
+        "arrays_sha256": "c84f8e4d507085c12fe0b1b0af752aa076aa67aefb781274618cb84592b5c98a"
+      }
+    ],
+    "cold_artifact_replay": {
+      "exit_code": 0,
+      "seconds": 53.435165882110596,
+      "optimizer_steps": 3,
+      "fallback_count": 0,
+      "numerical_passed": true,
+      "comparison_fields": 372,
+      "failed_fields": 0,
+      "original_files": 40,
+      "original_archive_bytes": 1333970,
+      "rebuilt_files": 40,
+      "all_generated_cc_equal": true,
+      "all_command_keys_equal": true,
+      "all_originals_restored": true,
+      "receipt": "${JITTOR_LAB_ROOT}/_state/trl-ddp-local-20261025/original-ppo-window-artifacts-backup-r1/receipt.json",
+      "receipt_sha256": "8c22010a87213ba5453b1af92b6c9f239528ac644893881e229c6b86698c51b9"
+    },
+    "conclusion": "Original CUDA 719 remains open: ordinary, launch-blocking, exact-env warm, metadata, reduced public-mask, and targeted cold-JIT controls did not reproduce. No CUB or other product change is supported by these controls."
+  },
+  "handoff_code_snapshot": "a5fc2fc9db53ca818c4b2f3c029ca7872af0d312",
+  "measurement_source_identity": "Use the original receipt, source guards and dated report. The handoff snapshot is not substituted for the measured source."
+}
