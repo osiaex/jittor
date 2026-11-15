@@ -4,6 +4,14 @@
 
 namespace jittor
 {
+    class LogSumExpLastOpRunner : public BaseOpRunner
+    {
+    public:
+        LogSumExpLastOpRunner() : BaseOpRunner("LogSumExpLast") {}
+    protected:
+        void executeOp(AclOpRegistry::const_iterator &it) override;
+    };
+
     struct ReduceOpRunner : public BaseOpRunner
     {
         int op_idx; // Specific to reduce operations

@@ -315,12 +315,12 @@ def _backward_impl(self, gradient=None, retain_graph=None, create_graph=False, *
             keep_non_parameters=True,
         )
         for v in list(tensor_state.leaf_params.values()):
-            if isinstance(v, _NativeVar) and v.requires_grad and v.is_backward_leaf:
+            if isinstance(v, _NativeVar) and v._has_leaf_accumulator():
                 leaf_map.setdefault(id(v), v)
     else:
         _owner._torch_prune_leaf_registry()
         for v in list(tensor_state.leaf_params.values()):
-            if isinstance(v, _NativeVar) and v.requires_grad and v.is_backward_leaf:
+            if isinstance(v, _NativeVar) and v._has_leaf_accumulator():
                 leaf_map.setdefault(id(v), v)
     if not leaf_map:
         return None

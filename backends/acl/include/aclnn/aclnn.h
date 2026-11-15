@@ -109,6 +109,8 @@
 #include "aclnnop/aclnn_incre_flash_attention_v4.h"
 #include "aclnnop/aclnn_softmax.h"
 #include "aclnnop/aclnn_softmax_backward.h"
+#include "aclnnop/aclnn_logsoftmax.h"
+#include "aclnnop/aclnn_logsoftmax_backward.h"
 #include "aclnnop/aclnn_batch_norm.h"
 #include "aclnnop/aclnn_batch_norm_backward.h"
 #include "aclnnop/aclnn_layer_norm.h"

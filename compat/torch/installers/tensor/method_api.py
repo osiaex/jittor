@@ -3,6 +3,8 @@ from importlib import import_module
 from collections.abc import Sequence
 import warnings
 import contextlib
+import math
+from jittor._runtime.dispatch import try_dispatch
 from jittor._core.dtypes import dtype_name as _jittor_dtype_name
 from ...context import get_install_context
 from ...amp import _autocast_state, _preserve_autocast_arithmetic, _cuda_autocast_fp32_input
@@ -1917,6 +1919,12 @@ def _tensor_pow(self, other):
         self, other = _cuda_autocast_fp32_input(self), _cuda_autocast_fp32_input(other)
         with _owner.jt.flag_scope(amp_reg=0):
             return _promoting_binary(self, other, '__pow__', False)
+    # RMSNorm commonly passes the integer exponent 2. The native x*x
+    # shortcut exposes two autograd edges instead of Torch's one PowBackward.
+    if (type(other) is int and other == 2) or (type(other) is float and math.isfinite(other)):
+        fast = try_dispatch("tensor.pow_scalar", self, exponent=other)
+        if fast is not None:
+            return fast
     return _promoting_binary(self, other, '__pow__', False)
 
 
@@ -2082,14 +2090,18 @@ def _api_zero_batch(tensors):
 
 def _inplace_add_sub(self, other, alpha, subtract=False):
     other = _dense_arithmetic_operand(other)
-    value = self - other * alpha if subtract else self + other * alpha
-    if tuple(value.shape) != tuple(self.shape):
-        raise RuntimeError("in-place result shape does not match destination shape")
-    namespace = get_install_context(_owner.jt).target_namespace
-    if not namespace.can_cast(value.dtype, self.dtype):
-        raise RuntimeError("result type can't be cast to the destination type")
-    if value.dtype != self.dtype:
-        value = value.cast(_jittor_dtype_name(self.dtype))
+    # Jittor's wrapped alpha scalar can otherwise introduce a gradient edge
+    # even when neither Torch operand requires gradients.
+    tracks_grad = self.requires_grad or getattr(other, "requires_grad", False)
+    with contextlib.nullcontext() if tracks_grad else _owner.jt.no_grad():
+        value = self - other * alpha if subtract else self + other * alpha
+        if tuple(value.shape) != tuple(self.shape):
+            raise RuntimeError("in-place result shape does not match destination shape")
+        namespace = get_install_context(_owner.jt).target_namespace
+        if not namespace.can_cast(value.dtype, self.dtype):
+            raise RuntimeError("result type can't be cast to the destination type")
+        if value.dtype != self.dtype:
+            value = value.cast(_jittor_dtype_name(self.dtype))
     return _ip(self, value, preserve_storage=True)
 
 

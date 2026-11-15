@@ -7,7 +7,7 @@ from _helpers.child_process import run_python_child
 
 @pytest.mark.parametrize("case", (
     "nonleaf", "disconnected", "retained", "collection", "interleaved",
-    "unowned_parameter", "retain_contract",
+    "unowned_parameter", "retain_contract", "stale_view", "stale_view_with_optimizer",
 ))
 def test_independent_autograd_registration_lifetime(case):
     script = """
@@ -17,9 +17,11 @@ import weakref
 import numpy as np
 from jittor.compat.shim import activate
 torch = activate()["torch"]
-x = torch.tensor([2.], requires_grad=True)
 import jittor as jt
-if jt.introspection.policy.runtime.use_cuda:
+use_accelerator = jt.introspection.policy.runtime.use_cuda
+device = ('npu' if torch.npu.is_available() else 'cuda') if use_accelerator else 'cpu'
+x = torch.tensor([2.], device=device, requires_grad=True)
+if use_accelerator:
     x.sync()
     assert x.location() == "device", "CUDA probe silently used host storage"
 case = sys.argv[1]
@@ -64,6 +66,26 @@ elif case == "unowned_parameter":
     owned.square().sum().backward()
     unowned.square().sum().backward()
     np.testing.assert_array_equal(unowned.grad.numpy(), [10.])
+elif case in ("stale_view", "stale_view_with_optimizer"):
+    from jittor.compat.torch.tensor_state import get_tensor_state
+    with torch.no_grad():
+        stale = torch.Tensor(x)
+        x.copy_(x)
+    assert stale.requires_grad
+    assert not stale._has_leaf_accumulator()
+    # Simulate a live registry entry whose alias history changed after registration.
+    get_tensor_state(jt).leaf_params[id(stale)] = stale
+    if case == "stale_view_with_optimizer":
+        x = torch.nn.Parameter(torch.tensor([2.], device=device))
+        optimizer = torch.optim.SGD([x], lr=0.1)
+    x.square().sum().backward()
+    np.testing.assert_array_equal(x.grad.numpy(), [4.])
+    try:
+        stale.clone()
+    except RuntimeError as error:
+        assert "no_grad mode" in str(error)
+    else:
+        raise AssertionError("using a stale view must still raise")
 elif case == "retain_contract":
     assert x.retain_grad() is None and not x.retains_grad
     middle = x * 3

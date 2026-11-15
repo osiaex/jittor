@@ -51,8 +51,8 @@ def setup(acl, monkeypatch, tmp_path):
     monkeypatch.setattr(acl.shutil, "which", lambda name: "/cann/bin/" + name)
     calls = []
     library = object()
-    converter = SimpleNamespace(process=lambda *args: "converted",
-                                init_acl_ops=lambda: calls.append(("init",)))
+    native_core = SimpleNamespace(
+        initialize_backend_operators=lambda: calls.append(("init",)))
     base = api.BuildConfig(
         cc_path="/host/bin/c++", kernel_flags=" -O2 ",
         cc_flags="-std=c++14 -I/source/src", jittor_path="/source",
@@ -60,14 +60,14 @@ def setup(acl, monkeypatch, tmp_path):
         environment={"existing_env": "yes"}, resources={"existing_resource": 3},
     )
     def compile_module(source, flags):
-        calls.append(("compile", source, flags))
-        return converter
+        raise AssertionError("ACL configure imported an extension before the core")
     def load_library(name, mode):
         calls.append(("load", name, mode))
         return library
-    context = api.BuildContext(base, compile_module, load_library=load_library)
+    context = api.BuildContext(base, compile_module, load_library=load_library,
+                               native_core=native_core)
     return SimpleNamespace(api=api, context=context, base=base, calls=calls,
-                           library=library, converter=converter)
+                           library=library)
 
 
 def test_configure_returns_complete_value_without_global_writes(acl, setup):
@@ -83,8 +83,7 @@ def test_configure_returns_complete_value_without_global_writes(acl, setup):
     # provider exposes no converter.
     assert not config.setup_fake_cuda_lib
     assert config.has_accelerator
-    # The provider runtime is compiled by BuildConfig, not folded into the
-    # registration module.
+    # The provider runtime retains its own compilation flags.
     assert sorted(os.path.basename(source.path) for source in config.backend_sources) == [
         "backend.cc", "foreach_coefficients.cc", "workspace.cc"]
     assert all(isinstance(source, setup.api.BuildSource)
@@ -108,7 +107,6 @@ def test_configure_returns_complete_value_without_global_writes(acl, setup):
     assert config.kernel_source_roots == config.kernel_flag_filter == ()
     assert config.convert_nvcc_flags is None
     assert config.environment == {"existing_env": "yes", "use_mkl": "0"}
-    assert config.resources["acl_initializer"] is setup.converter
     assert config.resources["acl_library"] is setup.library
     assert config.resources["existing_resource"] == 3
     assert config.extra_core_files[0] == "existing.cc"
@@ -123,17 +121,10 @@ def test_configure_returns_complete_value_without_global_writes(acl, setup):
     assert {"grid_sample_op_acl.cc", "topk_op_acl.cc", "vector_norm_op_acl.cc"} <= {
         os.path.basename(path) for path in expected_extra}
     assert len(converter_sources) == 3
-    assert len(config.extra_core_files) == len(expected_extra) + 1
-    assert set(config.extra_core_files) == {"existing.cc", *expected_extra}
-    assert [call[0] for call in setup.calls] == ["load", "compile"]
-    assert setup.calls[0][1:] == ("libascendcl.so", os.RTLD_NOW | os.RTLD_GLOBAL)
-    converter_flags = setup.calls[1][2]
-    assert "-DHAS_ACCELERATOR" in converter_flags.split()
-    assert "-I/source/src" in converter_flags
-    assert all(name in converter_flags for name in converter_sources)
-    assert all(name not in converter_flags for name in expected_extra)
+    assert len(config.extra_core_files) == len(expected_extra) + len(converter_sources) + 1
+    assert set(config.extra_core_files) == {"existing.cc", *expected_extra, *converter_sources}
+    assert setup.calls == [("load", "libascendcl.so", os.RTLD_NOW | os.RTLD_GLOBAL)]
     for name in ("backend.cc", "workspace.cc"):
-        assert str(SOURCE.parent / "src" / name) not in converter_flags
         assert str(SOURCE.parent / "src" / name) not in config.extra_core_files
     assert {source.path for source in config.backend_sources} == {
         str(SOURCE.parent / "src" / name)
@@ -209,8 +200,8 @@ def test_missing_toolkit_fails_before_work(acl, setup, monkeypatch, toolkit):
     assert not setup.calls
 
 
-@pytest.mark.parametrize("service", ["load_library", "compile_module"])
-def test_configuration_failures_propagate(acl, setup, service):
+def test_configuration_failures_propagate(acl, setup):
+    service = "load_library"
     from dataclasses import replace
     def failure(*args, **kwargs):
         raise RuntimeError(service + " failed")
@@ -221,7 +212,7 @@ def test_configuration_failures_propagate(acl, setup, service):
     assert os.environ["use_mkl"] == "1"
 
 
-def test_post_process_uses_returned_converter(acl, setup, monkeypatch):
+def test_post_process_registers_operators_via_native_core(acl, setup, monkeypatch):
     config = acl.configure(setup.context)
     flags = SimpleNamespace(use_cuda_host_allocator=0, use_parallel_op_compiler=1,
                             amp_reg=8)

@@ -15,4 +15,13 @@ namespace jittor
 
         void executeOp(AclOpRegistry::const_iterator &it) override;
     };
+
+    class PowScalarOpRunner : public BaseOpRunner
+    {
+    protected:
+        void executeOp(AclOpRegistry::const_iterator &it) override;
+    public:
+        double exponent = 0;
+        PowScalarOpRunner() : BaseOpRunner("PowScalar") {}
+    };
 }

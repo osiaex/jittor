@@ -206,6 +206,23 @@ BACKEND_GRAD_COVERAGE = (
      "tests/backends/acl/test_acl_codeop_gradients.py::TestACLCodeOpGradients::test_nearest_upsample_forward_and_gradient",
      "npu_hardware"),
 
+    # ACL FP32 Torch compatibility backward paths.
+    ("backends/acl/kernels/neural.py", "_SoftplusACL",
+     "compat/tests/torch/test_torch_acl_rmsnorm_primitives.py::TestACLRMSNormPrimitives::test_softplus_native_backward",
+     "npu_hardware"),
+    ("backends/acl/kernels/ops/matmul_op.py", "_LinearBiasACL",
+     "compat/tests/torch/test_torch_acl_rmsnorm_primitives.py::TestACLRMSNormPrimitives::test_linear_bias_backward",
+     "npu_hardware"),
+    ("backends/acl/kernels/ops/softmax_op.py", "LogSoftmaxACL",
+     "compat/tests/torch/test_torch_acl_rmsnorm_primitives.py::TestACLRMSNormPrimitives::test_log_softmax_native_backward",
+     "npu_hardware"),
+    ("backends/acl/kernels/tensor.py", "_PowScalarACL",
+     "compat/tests/torch/test_torch_acl_rmsnorm_primitives.py::TestACLRMSNormPrimitives::test_integer_square_contributes_one_pow_gradient",
+     "npu_hardware"),
+    ("backends/acl/kernels/tensor.py", "_RsqrtACL",
+     "compat/tests/torch/test_torch_acl_rmsnorm_primitives.py::TestACLRMSNormPrimitives::test_rsqrt_backward_matches_native_pytorch_operation_order",
+     "npu_hardware"),
+
     # ---- CPU oneDNN. Runs everywhere. -------------------------------------
     ("backends/cpu/libraries/mkl/mkl_batched_matmul_op.cc",
      "MklBatchedMatmulOp",

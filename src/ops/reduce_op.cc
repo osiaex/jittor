@@ -12,6 +12,7 @@
 #include "core/executor.h"
 #include "runtime/backend.h"
 #include "runtime/device.h"
+#include "runtime/dispatch_context.h"
 
 namespace jittor {
 
@@ -390,6 +391,14 @@ VarPtr ReduceOp::grad(Var* out, Var* dout, Var* v, int v_index) {
     }
     if (ns == ns_mean) {
         VarPtr a = make_broadcast_to(dout, v, reduce_mask, keepdims_mask);
+        if (a->dtype() == ns_float32 && out->num && v->num &&
+                query_dispatch_context({v, dout}).backend == "acl") {
+            // Match ATen mean_backward: divide the cotangent by the element
+            // count without rounding a reciprocal first.
+            VarPtr count = make_number(static_cast<float>(v->num / out->num), dout);
+            VarPtr scaled = make_binary(dout, count, ns_divide);
+            return make_broadcast_to(scaled, v, reduce_mask, keepdims_mask);
+        }
         VarPtr n = make_number(1.0f*out->num / v->num, a);
         return make_binary(a, n, ns_multiply);
     }

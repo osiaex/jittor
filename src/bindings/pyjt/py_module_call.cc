@@ -771,6 +771,11 @@ PyObject* rms_norm_registered_inference(PyObject* module, PyObject* dict, PyObje
     NanoString input_dtype = GET_RAW_PTR(VarHolder, x)->var->dtype();
     NanoString weight_dtype = GET_RAW_PTR(VarHolder, weight)->var->dtype();
     if (input_dtype != weight_dtype) return nullptr;
+    // Match the Python shortcut's FP32 ACL guard before calling providers.
+    auto* input = GET_RAW_PTR(VarHolder, x)->var;
+    auto backend = input->placement.explicit_backend ? input->placement.device.backend
+                                                    : accelerator_backend_id();
+    if (input_dtype == ns_float32 && backend == BackendId::Acl) return nullptr;
     // BF16 has a separately rounded, weight-after-normalization ACL path.
     // Its Python owner stays in charge, as does every gradient-enabled call.
     if ((input_dtype != ns_float16 && input_dtype != ns_float32)

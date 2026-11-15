@@ -66,9 +66,12 @@ def linspace(start, end, steps):
     """
     import jittor as jt
     if steps > 1:
-        res = jt.index((steps,))[0]
-        res = res*float((end-start)/(steps-1))+start
-        # Pin the endpoint instead of trusting the accumulated rounding.
+        index = jt.index((steps,))[0]
+        step = float((end - start) / (steps - 1))
+        # Evaluate each half from its nearest endpoint, as torch.linspace does.
+        res = jt.ternary(index < steps // 2,
+                         start + index * step,
+                         end - (steps - 1 - index) * step)
         res = jt.cat([res[:-1], jt.array([end], dtype=res.dtype)])
     else:
         res = jt.array([start])

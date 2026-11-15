@@ -99,6 +99,22 @@ def empty_cache():
     jt.gc()
 
 
+def manual_seed(seed):
+    seed = int(seed)
+    if not device_count():
+        return
+    from .core import _normalize_seed
+    jt.core.rng_manual_seed("acl", _normalize_seed(seed), current_device())
+
+
+def manual_seed_all(seed):
+    seed = int(seed)
+    if not device_count():
+        return
+    from .core import _normalize_seed
+    jt.core.rng_manual_seed_all("acl", _normalize_seed(seed))
+
+
 def is_bf16_supported():
     _require_acl()
     return True
@@ -146,7 +162,7 @@ _REFUSED = (
 )
 
 _SUPPORTED = ("is_available", "device_count", "current_device", "set_device",
-              "device", "synchronize", "empty_cache", "is_bf16_supported",
+              "device", "synchronize", "empty_cache", "manual_seed", "manual_seed_all", "is_bf16_supported",
               "npu_rms_norm", "npu_rotary_mul", "npu_swiglu")
 
 
@@ -168,6 +184,9 @@ def install(ctx):
         Fidelity.EXACT,
         "Native ACL discovery and selection; the index accepts an int, a "
         "string, a torch.device or None, as torch's does.")
+    register_api_bindings(
+        npu, "torch.npu", ("manual_seed", "manual_seed_all"), Fidelity.EXACT,
+        "Reseeds the current or every visible native ACL default RNG stream.")
     register_api_bindings(
         npu, "torch.npu", ("synchronize", "empty_cache"), Fidelity.APPROXIMATE,
         "Submits Jittor's pending work and waits for every device it "

@@ -66,6 +66,7 @@ def providers(monkeypatch):
         monkeypatch.setitem(sys.modules, name, package)
     native = sys.modules["jittor"]
     native.Var = _Tensor
+    native.Function = object
     native.core = SimpleNamespace(Var=_Tensor, dispatch_context=lambda tensors: ("acl", 0))
     native.flags = SimpleNamespace(no_grad=1)
     native.runtime = SimpleNamespace(use_cuda=1)
@@ -119,7 +120,9 @@ def providers(monkeypatch):
                     # verified device specialization must decline here.
                     setattr(module, alias.name, lambda *args, **kwargs: None)
                 else:
-                    setattr(module, alias.name, primitive(alias.name))
+                    replacement = primitive(alias.name)
+                    replacement.__module__ = module_name
+                    setattr(module, alias.name, replacement)
     # Conv3d checks a lazily queried SoC capability; load its real host-only
     # owner before neural.py in this package with an intentionally empty path.
     load("jittor.backends.acl.kernels._soc", KERNELS / "_soc.py")
@@ -144,8 +147,8 @@ def test_acl_install_publishes_real_owners_idempotently_without_facade_writes(pr
     # A literal count is the canary that a new registration was deliberate.
     # The duplicate check above catches a name registered twice, but not a
     # kernel that appears because an import side effect grew the table.
-    # 51: Adds the measured 310P last-axis Euclidean inference subset.
-    assert len(operations) == 51, "ACL kernel count changed; update deliberately"
+    # Includes strict FP32 scalar pow, rsqrt, and Softplus.
+    assert len(operations) == 57, "ACL kernel count changed; update deliberately"
     assert len(first) == len(operations)
     assert providers.dispatch.registered_kernel("conv3d", "acl") is providers.neural.conv3d_acl
     assert providers.dispatch.registered_kernel("conv_transpose2d", "acl") is providers.neural.conv_transpose2d_acl

@@ -15,6 +15,7 @@
 #include "ops/op_register.h"
 #include "core/var_holder.h"
 #include "runtime/submission_pipeline.h"
+#include "runtime/dispatch_context.h"
 #include <atomic>
 #include <algorithm>
 
@@ -397,6 +398,16 @@ vector<VarPtr> grad(
         vector<int> input_grad_ids;
     };
 
+    // The Torch engine accumulates contributions as forward consumers run
+    // in reverse sequence order. A grouped derivative can deliver a
+    // contribution before we visit the input itself, so keep its origin.
+    const bool order_acl_gradients = !materialize_grads &&
+        query_dispatch_context({loss}).backend == "acl";
+    using GradContribution = pair<int64, VarPtr>;
+    vector<vector<GradContribution>> contributions;
+    if (order_acl_gradients)
+        contributions.resize(gvars.size());
+
     // Snapshot one var's outgoing structure immediately before consuming it.
     // Grad construction may append new consumers to this same list, or add
     // outputs to an upstream op that has not been visited yet.
@@ -432,6 +443,21 @@ vector<VarPtr> grad(
         #ifdef PREVENT_LARGE_FUSED_OP
         int gsum = 0;
         #endif
+        auto accumulate = [&](VarPtr contribution) {
+            if (!contribution)
+                return;
+            if (!grad) {
+                grad = move(contribution);
+                return;
+            }
+            grad = make_binary(grad, contribution, ns_add);
+            #ifdef PREVENT_LARGE_FUSED_OP
+            if (++gsum >= PREVENT_LARGE_FUSED_OP)
+                grad->set_flag(VarFlags::_stop_fuse);
+            #endif
+            assign_attrs(grad.ptr, var);
+        };
+
         for (const auto& snapshot : outgoing) {
             Op* op = snapshot.op;
             int n_o = snapshot.outputs.size();
@@ -461,11 +487,14 @@ vector<VarPtr> grad(
                     int id = snapshot.input_grad_ids[i];
                     if (id>=0) {
                         auto din = normalize_recorded_gradient(gvars[id], move(dins[i]));
-                        auto& grad = grads[id];
-                        if (din && grad) {
-                            grad = make_binary(grad, din, ns_add);
-                        } else
-                            grad = move(din);
+                        if (!din)
+                            continue;
+                        if (order_acl_gradients)
+                            contributions[id].emplace_back(op->id, move(din));
+                        else if (grads[id])
+                            grads[id] = make_binary(grads[id], din, ns_add);
+                        else
+                            grads[id] = move(din);
                     }
                 }
             } else {
@@ -482,23 +511,22 @@ vector<VarPtr> grad(
                         // var->num == 0 represents a any match var
                         ASSERT(dvar->num==var->num && dvar->shape.size()==var->shape.size())
                         << "dvar" << dvar << "var" << var;
-                    if (!grad)
-                        grad = move(dvar);
-                    else if (dvar) {
-                        grad = make_binary(grad, dvar, ns_add);
-                        #ifdef PREVENT_LARGE_FUSED_OP
-                        gsum ++;
-                        if (gsum>=PREVENT_LARGE_FUSED_OP) {
-                            // TODO: this is a dirty fix for
-                            // stopping fuse lots of op together,
-                            // try to find a better solution
-                            grad->set_flag(VarFlags::_stop_fuse);
-                        }
-                        #endif
-                        assign_attrs(grad.ptr, var);
-                    }
+                    if (order_acl_gradients && dvar)
+                        contributions[i].emplace_back(op->id, move(dvar));
+                    else
+                        accumulate(move(dvar));
                 }
             }
+        }
+        if (order_acl_gradients) {
+            auto& incoming = contributions[i];
+            std::stable_sort(incoming.begin(), incoming.end(),
+                [](const GradContribution& left, const GradContribution& right) {
+                    return left.first > right.first;
+                });
+            for (auto& contribution : incoming)
+                accumulate(move(contribution.second));
+            incoming.clear();
         }
         // Same story: this var may have collected no gradient at all, in which
         // case grad is null and there is nothing to cast.

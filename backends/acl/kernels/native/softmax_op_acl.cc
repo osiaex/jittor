@@ -59,4 +59,28 @@ namespace jittor
         return;
     }
 
+    LogSoftmaxOpRunner::LogSoftmaxOpRunner() : BaseOpRunner("LogSoftmax")
+    {
+    }
+
+    void LogSoftmaxOpRunner::executeOp(AclOpRegistry::const_iterator &it)
+    {
+        const auto attr = static_cast<SoftmaxAttr *>(op_attr.get());
+        ret = aclnnLogSoftmaxGetWorkspaceSize(inputTensors[0], attr->dim,
+            outputTensors[0], &workspaceSize, &executor);
+        launch(ret, aclnnLogSoftmax, true);
+    }
+
+    LogSoftmaxBackwardOpRunner::LogSoftmaxBackwardOpRunner()
+        : BaseOpRunner("LogSoftmaxBackward")
+    {
+    }
+
+    void LogSoftmaxBackwardOpRunner::executeOp(AclOpRegistry::const_iterator &it)
+    {
+        const auto attr = static_cast<SoftmaxAttr *>(op_attr.get());
+        ret = aclnnLogSoftmaxBackwardGetWorkspaceSize(inputTensors[0], inputTensors[1],
+            attr->dim, outputTensors[0], &workspaceSize, &executor);
+        launch(ret, aclnnLogSoftmaxBackward, true);
+    }
 }

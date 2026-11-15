@@ -136,6 +136,32 @@ class TestPadConstant(Base):
 # ---------------------------------------------------------------------------
 # F.pad -- replicate / reflect / circular
 # ---------------------------------------------------------------------------
+@unittest.skipUnless(_test_capability.check_accelerator("acl", backend=jt).enabled, "No ACL found")
+class TestNegativeConstantPadACL(unittest.TestCase):
+    def test_crop_and_mixed_padding(self):
+        values = np.arange(30, dtype=np.float32).reshape(2, 3, 5)
+        cases = [
+            ((-2, 0), (slice(None), slice(None), slice(2, None)), ((0, 0), (0, 0), (0, 0))),
+            ((2, -1, -1, 1), (slice(None), slice(1, None), slice(None, -1)), ((0, 0), (0, 1), (2, 0))),
+        ]
+        with jt.runtime.scope(use_cuda=1, use_acl=1, backend_fallback="error"):
+            before = jt.core.backend_fallback_count()
+            for widths, crop, padding in cases:
+                with self.subTest(widths=widths):
+                    expected = np.pad(values[crop], padding, constant_values=2.5)
+                    gradient = np.zeros_like(values)
+                    gradient[crop] = 1
+                    source = torch.tensor(values, device="npu:0", requires_grad=True)
+                    result = torch.nn.functional.pad(source, widths, value=2.5)
+                    result.sum().backward()
+                    np.testing.assert_array_equal(result.detach().cpu().numpy(), expected)
+                    np.testing.assert_array_equal(source.grad.detach().cpu().numpy(), gradient)
+                    with torch.no_grad():
+                        inference = torch.nn.functional.pad(source, widths, value=2.5)
+                        np.testing.assert_array_equal(inference.cpu().numpy(), expected)
+            self.assertEqual(jt.core.backend_fallback_count() - before, 0)
+
+
 class TestPadModes(Base):
     def setUp(self):
         self.x = np.random.RandomState(52).randn(1, 2, 4, 5).astype("float32")

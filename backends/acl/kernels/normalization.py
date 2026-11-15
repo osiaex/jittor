@@ -19,6 +19,16 @@ from ._soc import soc_name
 from .ops.vector_norm_op import VectorNormACL
 
 
+def logsumexp_last_acl(x):
+    from .ops._code import acl_code
+    return acl_code("LogSumExpLast", [x], [x.dtype], [x.shape[:-1]])[0]
+
+
+def logsumexp_last_supported(x):
+    return (x.ndim == 2 and x.numel() > 0
+            and _jittor_dtype_name(x.dtype) == "float32")
+
+
 def vector_norm_supported(x, ord=2, dim=None, keepdim=False):
     # The SDK avoids half intermediate square overflow/underflow. Keep the
     # measured last-axis scope; production timing did not establish a speedup,

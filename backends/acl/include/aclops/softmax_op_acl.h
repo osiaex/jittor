@@ -24,4 +24,21 @@ namespace jittor
         SoftmaxBackwardOpRunner();
     };
 
+    class LogSoftmaxOpRunner : public BaseOpRunner
+    {
+    protected:
+        void executeOp(AclOpRegistry::const_iterator &it) override;
+
+    public:
+        LogSoftmaxOpRunner();
+    };
+
+    class LogSoftmaxBackwardOpRunner : public BaseOpRunner
+    {
+    protected:
+        void executeOp(AclOpRegistry::const_iterator &it) override;
+
+    public:
+        LogSoftmaxBackwardOpRunner();
+    };
 }

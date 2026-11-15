@@ -154,6 +154,11 @@ def _standard_rms_norm(self, args, kwargs):
     # Mixed input/weight dtypes have promotion semantics owned by forward.
     if _jittor_dtype_name(value.dtype) != _jittor_dtype_name(weight.dtype):
         return None
+    # The vendor fused FP32 kernel rounds differently from Transformers'
+    # explicit RMSNorm forward. Let the module retain its arithmetic.
+    if (_jittor_dtype_name(value.dtype) == "float32"
+            and jt.core.dispatch_context([value, weight])[0] == "acl"):
+        return None
     epsilon = self.__dict__["variance_epsilon"]
     pytorch_order = _acl_bfloat16_rms_norm(value, weight, epsilon)
     if pytorch_order is not None:

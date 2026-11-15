@@ -27,6 +27,7 @@
 #include "utils/str_utils.h"
 #include "aclnn/aclnn.h"
 #include "binary_op_acl.h"
+#include <aclnnop/aclnn_pow.h>
 
 namespace jittor
 {
@@ -139,5 +140,15 @@ namespace jittor
         launch(ret, it->second.launcher(), true);
 
         return;
+    }
+
+    void PowScalarOpRunner::executeOp(AclOpRegistry::const_iterator &it)
+    {
+        std::unique_ptr<aclScalar, decltype(&aclDestroyScalar)> value(
+            aclCreateScalar(&exponent, ACL_DOUBLE), aclDestroyScalar);
+        CHECK(value);
+        ret = aclnnPowTensorScalarGetWorkspaceSize(inputTensors[0], value.get(),
+            outputTensors[0], &workspaceSize, &executor);
+        launch(ret, aclnnPowTensorScalar, true);
     }
 }

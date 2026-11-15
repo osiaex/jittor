@@ -73,6 +73,11 @@ class NativeOperation:
                 args += (kwargs.pop("exponent"),)
             else:
                 kwargs["y"] = kwargs.pop("exponent")
+        if (self._operation_key == "pow" and len(args) == 2 and not kwargs
+                and isinstance(args[0], context.state["Var"])
+                and type(args[1]) is int and args[1] == 2):
+            from .installers.tensor.method_api import _tensor_pow
+            return _tensor_pow(*args)
         if self._operation_key in ("mul", "multiply"):
             kwargs = dict(kwargs)
             for position, name in enumerate(("input", "other")):

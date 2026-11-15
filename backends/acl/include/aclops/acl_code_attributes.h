@@ -38,9 +38,9 @@ inline acl_data::AclAttrSchema acl_code_attribute_schema(const string& name) {
         field.required=false; field.has_default=true; field.default_value=std::move(value); return field; };
 
     if (name == "Gelu" || name == "GeluBackward") return {{"approximate", required(Type::int64)}};
-    if (name == "Softmax") return {{"dim", required(Type::int64)}};
+    if (name == "Softmax" || name == "LogSoftmax") return {{"dim", required(Type::int64)}};
     if (name == "SwiGlu") return {{"dim", required(Type::int64)}};
-    if (name == "SoftmaxBackward") return {{"dim", required(Type::int64)}};
+    if (name == "SoftmaxBackward" || name == "LogSoftmaxBackward") return {{"dim", required(Type::int64)}};
     if (name == "Triu") return {{"diagonal", required(Type::int64)}};
     if (name == "Flip") return {{"axes", required(Type::int64_vector)}};
     if (name == "Transpose") return {{"axes", required(Type::int64_vector)}};
@@ -118,14 +118,14 @@ void assign_acl_code_attributes(Runner& op, const acl_data::AclDecodedData& deco
         op.jt_name="swiglu";
         return;
     }
-    if (name == "Softmax") {
+    if (name == "Softmax" || name == "LogSoftmax") {
         auto attr=std::unique_ptr<SoftmaxAttr>(new SoftmaxAttr());
         attr->dim = fields.at("dim").int_value;
         op.op_attr=std::move(attr);
         op.jt_name="softmax";
         return;
     }
-    if (name == "SoftmaxBackward") {
+    if (name == "SoftmaxBackward" || name == "LogSoftmaxBackward") {
         auto attr=std::unique_ptr<SoftmaxAttr>(new SoftmaxAttr());
         attr->dim = fields.at("dim").int_value;
         op.op_attr=std::move(attr);

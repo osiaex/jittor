@@ -20,6 +20,27 @@ class _FunctionalLoss(Module):
         return functions[self.functional_name](*inputs, **self._kw)
 
 
+class CrossEntropyLoss(Module):
+    def __init__(self, weight=None, size_average=None, ignore_index=-100,
+                 reduce=None, reduction="mean", label_smoothing=0.0):
+        super().__init__()
+        self.register_buffer("weight", weight)
+        self.ignore_index = ignore_index
+        self.reduction = reduction
+        self.label_smoothing = label_smoothing
+        if size_average is not None or reduce is not None:
+            do_reduce = True if reduce is None else reduce
+            average = True if size_average is None else size_average
+            self.reduction = ("mean" if average else "sum") if do_reduce else "none"
+
+    def execute(self, input, target):
+        functional = get_install_context(jt).target_namespace.nn.functional
+        return functional.cross_entropy(
+            input, target, weight=self.weight, ignore_index=self.ignore_index,
+            reduction=self.reduction, label_smoothing=self.label_smoothing,
+        )
+
+
 class HuberLoss(_FunctionalLoss):
     functional_name = "huber_loss"
     defaults = (("reduction", "mean"), ("delta", 1.0))

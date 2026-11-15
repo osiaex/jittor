@@ -345,7 +345,10 @@ def isposinf(x):
 
 def rsqrt(x):
     import jittor as jt
-    return 1/jt.sqrt(x)
+    result = try_dispatch("tensor.rsqrt", x)
+    if result is not None:
+        return result
+    return 1 / jt.sqrt(x)
 
 
 def sinc(x):

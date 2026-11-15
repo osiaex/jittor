@@ -904,6 +904,26 @@ def _check_condition(condition, message, exception):
         text = message() if callable(message) else message
         raise exception(text if text is not None else "Expected cond to be True, but got False")
 
+def _check_with(error_type, cond, message=None):
+    if not isinstance(cond, _builtins.bool):
+        raise TypeError(f"cond must be a bool, but got {type(cond)}")
+    if cond:
+        return
+    if not issubclass(error_type, Exception) or issubclass(error_type, Warning):
+        raise AssertionError(f"error_type must be an exception other than Warning, got {error_type}")
+    if message is not None and not callable(message):
+        raise TypeError("message must be a callable")
+    _check_condition(cond, None if message is None else lambda: str(message()), error_type)
+
+
+def _check_tensor_all_with(error_type, cond, message=None):
+    if not isinstance(cond, jt.Var):
+        raise TypeError(f"cond must be a tensor, but got {type(cond)}")
+    if _var_dtype_name(cond) != "bool":
+        raise TypeError(f"cond tensor must have dtype torch.bool, but got {cond.dtype}")
+    _check_with(error_type, _check_to_pybool(cond), message)
+
+
 def _check(condition, message=None):
     return _check_condition(condition, message, RuntimeError)
 
@@ -1037,6 +1057,8 @@ def install(ctx):
     # may be a zero-arg callable that torch invokes lazily only on failure. The
     # condition is usually a python bool but can be a bool tensor (_check_tensor_all).
     g._check = _check
+    g._check_with = _check_with
+    g._check_tensor_all_with = _check_tensor_all_with
     g._check_is_size = _check_is_size
     g._check_index = _check_index
     g._check_value = _check_value

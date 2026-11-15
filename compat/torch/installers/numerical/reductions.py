@@ -226,7 +226,7 @@ def logcumsumexp(input, dim):
 
 @lru_cache(maxsize=1)
 def _fixed_row_logsumexp_class():
-    """Build the Torch-only CUDA path and its first/second derivative rules."""
+    """Build the fixed-row backend path and its first/second derivative rules."""
     from . import jt
     from jittor._runtime.dispatch import try_dispatch
 
@@ -258,7 +258,7 @@ def _fixed_row_logsumexp_class():
             with jt.flag_scope(amp_reg=jt.amp_flags.disabled):
                 result = try_dispatch('nn.torch_logsumexp_last', x)
             if result is None:
-                raise RuntimeError('selected CUDA logsumexp kernel became unavailable')
+                raise RuntimeError('selected logsumexp kernel became unavailable')
             self.result = result
             return result
 
@@ -266,6 +266,33 @@ def _fixed_row_logsumexp_class():
             return _FixedRowLogsumexpVJP()(self.original, seed.reshape((-1, 1)), self.result)
 
     return _FixedRowLogsumexp
+
+
+def _stable_logsumexp_keepdim(jt, value, dim):
+    with jt.flag_scope(amp_reg=jt.amp_flags.disabled):
+        shift = value.max(dim, keepdims=True).detach()
+        shift = jt.where(jt.isinf(shift), jt.zeros_like(shift), shift)
+        return shift + jt.log(jt.exp(value - shift).sum(dim, keepdims=True))
+
+
+@lru_cache(maxsize=1)
+def _acl_logsumexp_class():
+    from . import jt
+
+    class _ACLLogsumexp(jt.Function):
+        def __init__(self, dim):
+            self.dim = dim
+
+        def execute(self, value):
+            self.value = value
+            self.result = _stable_logsumexp_keepdim(jt, value, self.dim)
+            return self.result
+
+        def grad(self, seed):
+            # ATen's VJP uses the rounded forward result.
+            return seed * (self.value - self.result).exp()
+
+    return _ACLLogsumexp
 
 
 def logsumexp(input, dim, keepdim=False):
@@ -286,13 +313,11 @@ def logsumexp(input, dim, keepdim=False):
             result = _fixed_row_logsumexp_class()()(row)
             shape = tuple(int(v) for v in input.shape[:-1])
             return result.reshape(shape + ((1,) if keepdim else ()))
-    # The maximum is only a numerical shift. Differentiating through it
-    # causes cancellation at the maximum in large rows; its derivative is
-    # unnecessary because the shifted expression is invariant to the shift.
-    with jt.flag_scope(amp_reg=jt.amp_flags.disabled):
-        m = input.max(dim, keepdims=True).detach()
-        m = jt.where(jt.isinf(m), jt.zeros_like(m), m)
-        out = m + jt.log(jt.exp(input - m).sum(dim, keepdims=True))
+    if (input.ndim and str(input.dtype).replace("torch.", "") == "float32"
+            and jt.core.dispatch_context([input])[0] == "acl"):
+        out = _acl_logsumexp_class()(dim)(input)
+    else:
+        out = _stable_logsumexp_keepdim(jt, input, dim)
     # Back to the input's dtype for the two half types. The shift-exp-sum-log
     # chain is computed in float32 whatever it is handed -- `exp` is on jittor's
     # white list (`src/type/nano_string.cc`), so it widens -- and that is the

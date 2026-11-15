@@ -78,6 +78,20 @@ def _reduce_norm_group(value, how, group):
     return getattr(gathered, how)()
 
 
+def _sum_squared_grad_chunks(grads, acc_dtype, chunk_elements=1 << 24):
+    """Reduce slices to scalars before combining an oversized ACL norm."""
+    sums = []
+    for grad in grads:
+        if not grad.numel():
+            continue
+        x = grad.abs() if "complex" in _jittor_dtype_name(grad.dtype) else grad
+        flat = x.cast(acc_dtype).reshape((-1,))
+        for start in range(0, int(flat.numel()), chunk_elements):
+            part = flat[start:start + chunk_elements]
+            sums.append((part * part).sum().reshape((1,)))
+    return jt.concat(sums).sum()
+
+
 def _get_total_norm_device(grads, norm_type=2.0, error_if_nonfinite=False,
                            shard_reduce=False):
     """Compute the total norm for a list of gradient Vars on device.
@@ -140,6 +154,9 @@ def _get_total_norm_device(grads, norm_type=2.0, error_if_nonfinite=False,
             x = g.abs() if "complex" in _jittor_dtype_name(g.dtype) else g
             nonempty.append((_across((x != 0).sum(), "max") != 0).reshape((1,)))
         total = jt.concat(nonempty).sum().cast(acc_dtype)
+    elif (p == 2.0 and sum(int(g.numel()) for g in grads) > 2147483647
+          and jt.core.dispatch_context([grads[0]])[0] == "acl"):
+        total = jt.sqrt(_across(_sum_squared_grad_chunks(grads, acc_dtype), "sum"))
     else:
         parts = []
         for g in grads:

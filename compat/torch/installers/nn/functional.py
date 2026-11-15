@@ -103,7 +103,7 @@ def _poisson_nll(input, target, log_input=True, full=False, size_average=None,
 
 from ...context import get_install_context
 from types import MappingProxyType
-from .loss_modules import LOSS_CLASSES, PixelShuffle, PixelUnshuffle
+from .loss_modules import CrossEntropyLoss, LOSS_CLASSES, PixelShuffle, PixelUnshuffle
 from .extra_api import _adapt_extra
 
 def _softmax(input, dim=-1, _stacklevel=3, dtype=None):
@@ -174,6 +174,22 @@ def _cross_entropy(input, target, weight=None, size_average=None,
     C = int(input.shape[1]) if input.ndim >= 2 else int(input.shape[-1])
     if not label_smoothing:
         ii = -100 if ignore_index is None else ignore_index
+        if (input.ndim == 2 and target.ndim == 1 and input.shape[0] == target.shape[0]
+                and input.numel() and weight is None and size_average is None and reduce is None
+                and _jittor_dtype_name(input.dtype) == "float32"
+                and _jittor_dtype_name(target.dtype) == "int64"
+                and reduction in ("none", "mean", "sum")):
+            from jittor._runtime.dispatch import try_dispatch
+            logp = try_dispatch("nn.softmax", input, log=True, dim=1)
+            if logp is not None:
+                valid = (target != ii) & (target >= 0) & (target < C)
+                safe_target = jt.ternary(valid, target, jt.zeros_like(target))
+                nll = -logp.gather(1, safe_target.reshape((-1, 1))).reshape((-1,))
+                nll = jt.ternary(valid, nll, jt.zeros_like(nll))
+                if reduction == "none":
+                    return nll
+                total = nll.sum()
+                return total / valid.float32().sum() if reduction == "mean" else total
         return _jt_ce(input, target, weight=weight, ignore_index=ii,
                       reduction=reduction)
     target = _checked_class_target(target, C, ignore_index)
@@ -263,7 +279,23 @@ def _ctc_loss(log_probs, targets, input_lengths, target_lengths, blank=0,
     return (out / tl).mean()
 
 
+class _AclFloatLogSigmoid(jt.Function):
+    def execute(self, input):
+        self.input = input
+        return -jt.nn.softplus(-input)
+
+    def grad(self, grad_output):
+        # Match the native Torch VJP's arithmetic order on both signs.
+        negative = self.input < 0
+        magnitude = jt.exp(jt.ternary(negative, self.input, -self.input))
+        fraction = magnitude / (1 + magnitude)
+        return grad_output * jt.ternary(negative, 1 - fraction, fraction)
+
+
 def _api_F_logsigmoid(input):
+    if (_jittor_dtype_name(input.dtype) == "float32" and input.requires_grad
+            and jt.core.dispatch_context([input])[0] == "acl"):
+        return _AclFloatLogSigmoid()(input)
     # The piecewise min/abs form has a zero subgradient at x=0. Preference
     # losses start at exactly zero log-ratio and require d/dx logsigmoid(0)=1/2.
     return -jt.nn.softplus(-input)
@@ -354,8 +386,8 @@ def _install_functional(ctx):
     ):
         setattr(F, _name, _fn)
     # nn.*Loss class versions (criterion = nn.HuberLoss()): thin wrappers over the
-    # functional. KLDivLoss/BCELoss/BCEWithLogitsLoss/CrossEntropyLoss/MSELoss/L1Loss
-    # already exist on jittor.nn (verified correct); add the rest.
+    # functional. CrossEntropyLoss follows the Torch functional dispatch.
+    nn.CrossEntropyLoss = _adapt_extra(CrossEntropyLoss, ctx.registry)
     _loss_functions = {}
     for template in LOSS_CLASSES:
         _loss_functions[template.functional_name] = getattr(F, template.functional_name)
@@ -430,6 +462,6 @@ def _install_functional(ctx):
          "huber_loss", "kl_div", "margin_ranking_loss"), Fidelity.APPROXIMATE,
         "Reuses the canonical native loss implementation and supported argument subset")
     register_api_bindings(nn, "torch.nn",
-        tuple(template.__name__ for template in LOSS_CLASSES) + ("PixelShuffle", "PixelUnshuffle"),
+        tuple(template.__name__ for template in LOSS_CLASSES) + ("CrossEntropyLoss", "PixelShuffle", "PixelUnshuffle"),
         Fidelity.APPROXIMATE, "Module-owned layer implementations reuse native functionals; "
         "installation adapters preserve Tensor and parameter ownership")

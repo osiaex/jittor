@@ -2,16 +2,20 @@
 
 from jittor._runtime.dispatch import register_kernel
 from . import neural, normalization, tensor
+from .ops.matmul_op import linear_bias_acl, linear_bias_supported
 from .ops.flashattention_op import scaled_dot_product_attention_acl
 
 
 KERNELS = (
+    ("nn.torch_logsumexp_last", normalization.logsumexp_last_acl),
     ("linalg.vector_norm", normalization.vector_norm_acl),
     ("clamp.scalar", tensor._clamp_acl),
     ("tensor.triu", tensor.triu_acl),
     ("tensor.flip", tensor.flip_acl),
     ("tensor.concat", tensor.concat),
     ("tensor.gather", tensor.gather_acl),
+    ("tensor.pow_scalar", tensor.pow_scalar_acl),
+    ("tensor.rsqrt", tensor.rsqrt_acl),
     ("tensor.topk", tensor.topk_acl),
     ("tensor.all", tensor.all_acl),
     ("tensor.any", tensor.any_acl),
@@ -28,7 +32,9 @@ KERNELS = (
     ("tensor.split", tensor._split_acl),
     ("conv2d", neural.conv_acl),
     ("conv3d", neural.conv3d_acl),
+    ("conv3d.bias", neural.conv3d_acl),
     ("conv_transpose2d", neural.conv_transpose2d_acl),
+    ("linear_bias_accumulator", linear_bias_acl),
     ("matmul", neural.matmul_acl),
     ("batched_matmul", neural.bmm_acl),
     ("nn.resize", neural.resize_acl),
@@ -41,6 +47,7 @@ KERNELS = (
     ("nn.gelu", neural.gelu_acl),
     ("nn.cross_entropy_loss", neural.cross_entropy_loss_acl),
     ("nn.softmax", neural.softmax_acl),
+    ("nn.softplus", neural.softplus_acl),
     ("nn.rotary_emb", neural.rope_acl),
     ("nn.layer_norm.training", normalization.layer_norm_acl),
     ("nn.layer_norm.inference", normalization.layer_norm_acl),
@@ -64,7 +71,11 @@ def install():
     for operation, implementation in KERNELS:
         register_kernel(
             operation, "acl", implementation,
-            supports=(neural.softmax_supported
+            supports=(normalization.logsumexp_last_supported
+                      if implementation is normalization.logsumexp_last_acl else
+                      neural.conv3d_bias_supported
+                      if operation == "conv3d.bias" else
+                      neural.softmax_supported
                       if implementation is neural.softmax_acl else
                       neural.conv_transpose2d_supported
                       if implementation is neural.conv_transpose2d_acl else
@@ -73,5 +84,7 @@ def install():
                       normalization.vector_norm_supported
                       if implementation is normalization.vector_norm_acl else
                       tensor.topk_supported
-                      if implementation is tensor.topk_acl else None),
+                      if implementation is tensor.topk_acl else
+                      linear_bias_supported
+                      if implementation is linear_bias_acl else None),
         )

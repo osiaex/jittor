@@ -14,7 +14,8 @@ from .ops.matmul_op import MatmulACL
 from .ops.upsample_op import UpsampleNearest2dACL, UpsampleBicubic2dACL, UpsampleBilinear2dACL
 from .ops.relu_op import ReLUACL, LeakyReLUACL
 from .ops.silu_op import SiLUACL, SwishACL, SwiGluACL
-from .ops.softmax_op import SoftmaxACL
+from .ops._code import acl_code
+from .ops.softmax_op import LogSoftmaxACL, SoftmaxACL
 from .ops.pool_op import PoolACL, AdaptiveAvgPool2dACL
 from .ops.rope_op import RotaryPositionEmbeddingACL
 from ._soc import soc_name, allow_reduced_precision
@@ -45,10 +46,14 @@ def conv_acl(
     return ConvACL()(x, weight, bias, stride, padding, dilation, groups)
 
 
-def conv3d_acl(x, weight, stride=1, padding=0, dilation=1, groups=1):
-    # nn.functional.conv3d owns its separately rounded bias addition, and its
-    # selected kernel receives no bias argument. Both dimensions use the same
-    # aclnnConvolution runner with rank-sized spatial attributes.
+def conv3d_bias_supported(x, weight, stride=1, padding=0, dilation=1, groups=1, *, bias):
+    return (_dtype_in(x, ("float32",)) and _dtype_in(weight, ("float32",))
+            and _dtype_in(bias, ("float32",))
+            and bias.ndim == 1 and bias.shape[0] == weight.shape[0]
+            and not soc_name().startswith("Ascend310P"))
+
+
+def conv3d_acl(x, weight, stride=1, padding=0, dilation=1, groups=1, *, bias=None):
     if (not jt.flags.no_grad
             and (not x.is_stop_grad() or not weight.is_stop_grad())
             and soc_name().startswith("Ascend310P")):
@@ -59,7 +64,7 @@ def conv3d_acl(x, weight, stride=1, padding=0, dilation=1, groups=1):
             "ACL Conv3d gradients are unavailable on Ascend310P via "
             "aclnnConvolutionBackward; this path supports inference only "
             "(use no_grad or stop gradients on both input and weight)")
-    return ConvACL()(x, weight, None, stride, padding, dilation, groups)
+    return ConvACL()(x, weight, bias, stride, padding, dilation, groups)
 
 
 def conv_transpose2d_supported(x, weight, bias, stride, padding, output_padding,
@@ -279,6 +284,21 @@ def _silu_and_mul_acl(x):
     return None
 
 
+class _SoftplusACL(jt.Function):
+    def execute(self, x):
+        self.x = x
+        return acl_code("Softplus", [x], [x.dtype], [x.shape])[0]
+
+    def grad(self, dout):
+        return acl_code("SoftplusBackward", [dout, self.x], [dout.dtype], [dout.shape])[0]
+
+
+def softplus_acl(x, beta=1.0, threshold=20.0):
+    if beta == 1.0 and threshold == 20.0 and x.numel() and _jittor_dtype_name(x.dtype) == "float32":
+        return _SoftplusACL()(x)
+    return None
+
+
 def softmax_supported(x, log=False, zero_all_neg_inf=False, dim=None):
     return not zero_all_neg_inf
 
@@ -289,6 +309,8 @@ def softmax_acl(x, log=False, zero_all_neg_inf=False, dim=None):
     if dim is None:
         dim = 0 if x.ndim in (0, 1, 3) else 1
     if log:
+        if x.ndim and x.numel() and _jittor_dtype_name(x.dtype) == "float32":
+            return LogSoftmaxACL()(x, dim)
         x = x.float32()
         m = jt.max(x, dim, keepdims=True)
         shifted = x - m

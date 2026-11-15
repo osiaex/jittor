@@ -1223,7 +1223,8 @@ def _api_cuda_manual_seed(s):
     # Torch converts the argument before scheduling its lazy CUDA callback.
     # With no visible device, that callback never touches a CUDA generator.
     seed = int(s)
-    if not device_count():
+    # The legacy CUDA facade exposes ACL devices, which have no cuRAND state.
+    if getattr(jt.compiler, "has_acl", False) or not device_count():
         return
     from ..core import _normalize_seed
     seed = _normalize_seed(seed)
@@ -1233,6 +1234,8 @@ def _api_cuda_manual_seed(s):
 
 def _api_cuda_manual_seed_all(s):
     seed = int(s)
+    if getattr(jt.compiler, "has_acl", False):
+        return
     count = device_count()
     if not count:
         return

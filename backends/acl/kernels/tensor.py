@@ -8,6 +8,7 @@ import numpy as np
 import jittor as jt
 from .ops.multinomial_op import multinomial_acl
 from .ops.clamp_op import ClampACL
+from .ops._code import acl_code
 from .ops.triu_op import TriuACL
 from .ops.flip_op import FlipACL
 from .ops.concat_op import ConcatACL, SplitWithSizeACL
@@ -24,6 +25,45 @@ from .ops.setitem_op import SetItemACL
 from .ops.roll_op import RollACL
 from .ops.topk_op import TopkACL
 from ._soc import soc_name
+
+
+class _PowScalarACL(jt.Function):
+    def __init__(self, exponent):
+        self.exponent = exponent
+
+    def execute(self, x):
+        self.x = x
+        return acl_code("PowScalar", [x], [x.dtype], [x.shape],
+                        attr_code='op.exponent = data.at("exponent");',
+                        extra_data={"exponent": self.exponent})[0]
+
+    def grad(self, dout):
+        if self.exponent == 0:
+            return jt.zeros_like(dout)
+        return dout * (self.exponent * _PowScalarACL(self.exponent - 1)(self.x))
+
+
+def pow_scalar_acl(x, exponent):
+    if x.numel() and _jittor_dtype_name(x.dtype) == "float32":
+        return _PowScalarACL(exponent)(x)
+    return None
+
+
+class _RsqrtACL(jt.Function):
+    def execute(self, x):
+        self.result = 1 / jt.sqrt(x)
+        return self.result
+
+    def grad(self, dout):
+        result = self.result
+        # Follow ATen rsqrt_backward's rounding order.
+        return (-0.5 * dout) * ((result * result) * result)
+
+
+def rsqrt_acl(x):
+    if _jittor_dtype_name(x.dtype) == "float32" and not x.is_stop_grad():
+        return _RsqrtACL()(x)
+    return None
 
 
 def topk_supported(input, k, dim=-1, largest=True, sorted=True):
@@ -70,11 +110,26 @@ def concat(x, dim=0):
 
 
 def constant_pad_acl(x, amounts, value):
-    if not all((isinstance(width, (int, np.integer)) for width in amounts)) or any(
-        (int(width) < 0 for width in amounts)
-    ):
+    if not all(isinstance(width, (int, np.integer)) for width in amounts):
         return None
     result = x
+    if any(width < 0 for width in amounts):
+        slices = [slice(None)] * x.ndim
+        for pair_index in range(len(amounts) // 2):
+            axis = x.ndim - pair_index - 1
+            before, after = map(int, amounts[2 * pair_index:2 * pair_index + 2])
+            start = max(-before, 0)
+            stop = x.shape[axis] - max(-after, 0)
+            if stop < start:
+                raise RuntimeError("negative padding crops more than the input extent")
+            if stop == start:
+                # ACL SliceV2 cannot materialize this empty slice.
+                return None
+            slices[axis] = slice(start, stop)
+        result = x[tuple(slices)]
+        amounts = [max(width, 0) for width in amounts]
+        if not any(amounts):
+            return result.clone()
     fill_value = float(value)
     for pair_index in range(len(amounts) // 2):
         before = int(amounts[2 * pair_index])
@@ -330,6 +385,14 @@ def _get_insert_positions(x, slices):
 def setitem_acl(x, slices, value, reduce=None):
     if reduce not in (None, "void"):
         return None
+    if (isinstance(slices, jt.Var) and _jittor_dtype_name(slices.dtype) == "bool"
+            and 0 < slices.ndim < x.ndim and tuple(slices.shape) == tuple(x.shape[:slices.ndim])):
+        # A prefix mask selects complete rows from the remaining dimensions.
+        tail = tuple(x.shape[slices.ndim:])
+        if isinstance(value, jt.Var) and value.ndim:
+            selected = slices.int32().sum().item()
+            value = value.broadcast((selected, *tail)).reshape(-1)
+        slices = slices.reshape((*slices.shape, *((1,) * len(tail)))).broadcast(x.shape).contiguous()
     return SetItemACL()(x, slices, value)
 
 

@@ -951,11 +951,10 @@ UnaryOp::UnaryOp(Var* x, NanoString op) : x(x) {
     ns = op;
     USER_CHECK(ns.is_unary() | ns.is_dtype());
     if (ns == ns_log1p) {
-        // Complex log and ACL already support this same-device graph. Keep
-        // that existing behavior where a precise log1p kernel is unavailable;
-        // CPU/CUDA real inputs retain the dedicated, cancellation-safe kernel.
         const auto backend = query_dispatch_context({x}).backend;
-        if (x->dtype().is_complex() || backend == "acl" || backend == "acl_legacy") {
+        const auto dtype = x->dtype();
+        const bool acl_native = dtype == ns_float32 || dtype == ns_float16 || dtype == ns_bfloat16;
+        if (dtype.is_complex() || backend == "acl_legacy" || (backend == "acl" && !acl_native)) {
             forward(make_unary(make_binary(make_number(1, x), x, ns_add), ns_log));
             return;
         }

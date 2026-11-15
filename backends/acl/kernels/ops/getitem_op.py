@@ -121,6 +121,13 @@ _SLICE_PROGRAM_LIMIT = 4096
 
 def basic_slice_acl(x, slices):
     """Use a native CodeOp gradient for basic, unit-stride slices."""
+    # The CodeOp backward receives every saved forward tensor, even though
+    # slicing needs only bounds and the incoming gradient. Use the explicit
+    # SliceV2 backward for differentiable inputs so legal view writes do not
+    # invalidate values this derivative never reads.
+    if not jt.flags.no_grad and x.requires_grad:
+        return None
+
     if not isinstance(slices, tuple):
         slices = (slices,)
     if not all(
@@ -436,6 +443,11 @@ class GetItemACL(jt.Function):
                 if not all(isinstance(v, (int, np.integer)) for v in s):
                     raise TypeError("ACL getitem list indices must contain integers")
                 slices[i] = jt.array(s, dtype="int32")
+        # The advanced Index path already preserves every trailing axis.
+        # Explicit full slices are equivalent to omitting those axes.
+        if any(isinstance(index, jt.Var) for index in slices):
+            while isinstance(slices[-1], slice) and slices[-1] == slice(None):
+                slices.pop()
         slices = tuple(slices)
         expanded_indices = self.expand_single_tensor_index(x, slices)
         if self.empty_index_shape is not None:

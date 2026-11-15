@@ -463,7 +463,7 @@ def ones(*shape, dtype="float32"):
     return _constant_scalar(1, dtype).broadcast(shape)._as_tensor()
 
 @contextmanager
-def placement_scope_like(x):
+def placement_scope_like(x, *, override=False):
     """Run a block under `x`'s explicit tensor placement, if it has one.
 
     Allocation helpers (`jt.empty`, `jt.ones`, ...) follow the *ambient*
@@ -477,12 +477,13 @@ def placement_scope_like(x):
     The reference tensor is a *default*, so a placement the caller asked for
     outranks it: `torch.zeros_like(gpu, device="cpu")` has already placed the
     construction on the host, and re-scoping to the source's device would hand
-    back a CUDA tensor.
+    back a CUDA tensor. Operators without a device argument can set
+    override=True so an enclosing module scope does not move their inputs.
     """
     import jittor as jt
     # `int` is shadowed in this module by jittor's integer dtype constructor.
     backend = ori_int(x.placement_backend)
-    if backend < 0 or jt.core._current_tensor_placement() is not None:
+    if backend < 0 or (not override and jt.core._current_tensor_placement() is not None):
         yield
         return
     device = max(ori_int(x.device_id), 0)
@@ -1170,12 +1171,13 @@ def clamp(x, min_v=None, max_v=None):
     # be dispatched to. The native path declines (NotImplemented) for any
     # input it does not render exactly -- a Var or numpy bound, a bool, an
     # empty Var -- and a replaced `_try_dispatch` has no shortcut to skip.
-    native = getattr(_try_dispatch, "_native_clamp", None)
-    if native is not None and _try_dispatch._sole_default("clamp", _clamp_cpu):
-        out = native(x, min_v, max_v)
-        if out is not NotImplemented:
-            return out
-    return _try_dispatch("clamp", x, min_v, max_v)
+    with placement_scope_like(x, override=True):
+        native = getattr(_try_dispatch, "_native_clamp", None)
+        if native is not None and _try_dispatch._sole_default("clamp", _clamp_cpu):
+            out = native(x, min_v, max_v)
+            if out is not NotImplemented:
+                return out
+        return _try_dispatch("clamp", x, min_v, max_v)
 
 Var.clamp = clamp
 

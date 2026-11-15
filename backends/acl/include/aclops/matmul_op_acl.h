@@ -20,6 +20,14 @@ namespace jittor
         MatMulOpRunner();
     };
 
+    class LinearBiasOpRunner : public MatMulOpRunner
+    {
+    protected:
+        void executeOp(AclOpRegistry::const_iterator &it) override;
+    public:
+        LinearBiasOpRunner();
+    };
+
     // The right operand is an explicitly packed FP16 weight snapshot. Its
     // physical NZ dimensions are distinct from the logical transposed matrix.
     class PackedMatMulOpRunner : public BaseOpRunner

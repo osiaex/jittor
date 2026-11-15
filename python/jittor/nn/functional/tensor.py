@@ -198,6 +198,12 @@ def one_hot(x: jt.Var, num_classes: int = -1) -> jt.Var:
     if num_classes == -1:
         num_classes = x.max().item() + 1
 
+    if dtype_name(x.dtype) in ("int32", "int64") and jt.core.dispatch_context([x])[0] == "acl":
+        from jittor._core.var import placement_scope_like
+        with placement_scope_like(x, override=True):
+            classes = jt.array(np.arange(num_classes, dtype=dtype_name(x.dtype)))
+            return (x.unsqueeze(-1) == classes).cast(x.dtype)
+
     N = len(x.shape)
     indices = ["i" + str(i) for i in range(N)]
     y = jt.ones_like(x).reindex(

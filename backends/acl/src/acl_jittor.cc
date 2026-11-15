@@ -1,3 +1,5 @@
+#include <aclnnop/aclnn_softplus.h>
+#include <aclnnop/aclnn_softplus_backward.h>
 // ***************************************************************
 // Copyright (c) 2023 Jittor. All Rights Reserved.
 // This file is subject to the terms and conditions defined in
@@ -16,6 +18,11 @@
 #include <aclnnop/aclnn_grid_sampler2d.h>
 #include <aclnnop/aclnn_topk.h>
 #include <aclnnop/aclnn_linalg_vector_norm.h>
+#include <aclnnop/aclnn_remainder.h>
+#include <aclnnop/aclnn_addmm.h>
+#include <aclnnop/aclnn_log1p.h>
+#include <aclnnop/aclnn_logsumexp.h>
+#include <aclnnop/aclnn_pow.h>
 
 namespace jittor {
 const AclOpRegistry& acl_op_registry() {
@@ -23,6 +30,7 @@ const AclOpRegistry& acl_op_registry() {
         {"Abs", AclOpFunctions::unary(aclnnAbsGetWorkspaceSize, aclnnAbs)},
         {"Exp", AclOpFunctions::unary(aclnnExpGetWorkspaceSize, aclnnExp)},
         {"Log", AclOpFunctions::unary(aclnnLogGetWorkspaceSize, aclnnLog)},
+        {"Log1p", AclOpFunctions::unary(aclnnLog1pGetWorkspaceSize, aclnnLog1p)},
         {"Sqrt", AclOpFunctions::unary(aclnnSqrtGetWorkspaceSize, aclnnSqrt)},
         {"Ceil", AclOpFunctions::unary(aclnnCeilGetWorkspaceSize, aclnnCeil)},
         {"Floor", AclOpFunctions::unary(aclnnFloorGetWorkspaceSize, aclnnFloor)},
@@ -53,6 +61,7 @@ const AclOpRegistry& acl_op_registry() {
         {"Mul", AclOpFunctions::binary(aclnnMulGetWorkspaceSize, aclnnMul)},
         {"RealDiv", AclOpFunctions::binary(aclnnDivGetWorkspaceSize, aclnnDiv)},
         {"FloorDiv", AclOpFunctions::binary(aclnnFloorDivideGetWorkspaceSize, aclnnFloorDivide)},
+        {"Mod", AclOpFunctions::binary(aclnnRemainderTensorTensorGetWorkspaceSize, aclnnRemainderTensorTensor)},
         {"LessEqual", AclOpFunctions::binary(aclnnLeTensorGetWorkspaceSize, aclnnLeTensor)},
         {"Less", AclOpFunctions::binary(aclnnLtTensorGetWorkspaceSize, aclnnLtTensor)},
         {"GreaterEqual", AclOpFunctions::binary(aclnnGeTensorGetWorkspaceSize, aclnnGeTensor)},
@@ -66,12 +75,15 @@ const AclOpRegistry& acl_op_registry() {
         {"BitwiseOr", AclOpFunctions::binary(aclnnBitwiseOrTensorGetWorkspaceSize, aclnnBitwiseOrTensor)},
         {"BitwiseXor", AclOpFunctions::binary(aclnnBitwiseXorTensorGetWorkspaceSize, aclnnBitwiseXorTensor)},
         {"Pow", AclOpFunctions::binary(aclnnPowTensorTensorGetWorkspaceSize, aclnnPowTensorTensor)},
+        {"PowScalar", AclOpFunctions::direct(aclnnPowTensorScalar)},
         {"Expand", AclOpFunctions::direct(aclnnExpand)},
         {"MatMul", AclOpFunctions::direct(aclnnMatmul)},
+        {"LinearBias", AclOpFunctions::direct(aclnnAddmm)},
         {"PackedMatMul", AclOpFunctions::direct(aclnnMatmul)},
         {"BatchMatMul", AclOpFunctions::direct(aclnnBatchMatMul)},
         {"ReduceMax", AclOpFunctions::direct(aclnnAmax)},
         {"ReduceMin", AclOpFunctions::direct(aclnnAmin)},
+        {"LogSumExpLast", AclOpFunctions::direct(aclnnLogSumExp)},
         {"ReduceSum", AclOpFunctions::direct(aclnnReduceSum)},
         {"Triu", AclOpFunctions::direct(aclnnTriu)},
         {"Conv2d", AclOpFunctions::direct(aclnnConvolution)},
@@ -119,6 +131,10 @@ const AclOpRegistry& acl_op_registry() {
         {"SplitWithSize", AclOpFunctions::direct(aclnnSplitWithSize)},
         {"Softmax", AclOpFunctions::direct(aclnnSoftmax)},
         {"SoftmaxBackward", AclOpFunctions::direct(aclnnSoftmaxBackward)},
+        {"LogSoftmax", AclOpFunctions::direct(aclnnLogSoftmax)},
+        {"LogSoftmaxBackward", AclOpFunctions::direct(aclnnLogSoftmaxBackward)},
+        {"Softplus", AclOpFunctions::direct(aclnnSoftplus)},
+        {"SoftplusBackward", AclOpFunctions::direct(aclnnSoftplusBackward)},
         {"FlashAttention", AclOpFunctions::direct(aclnnFlashAttentionScoreV2)},
         {"PromptFlashAttention", AclOpFunctions::direct(aclnnPromptFlashAttentionV3)},
         {"FlashAttentionBackward", AclOpFunctions::direct(aclnnFlashAttentionScoreGradV2)},

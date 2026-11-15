@@ -582,7 +582,8 @@ def _transpose_base_last2(x):
 def _conj_last2(x):
     axes = list(range(x.ndim))
     axes[-1], axes[-2] = axes[-2], axes[-1]
-    return x.transpose(axes).conj()
+    transposed = x.transpose(axes)
+    return transposed.conj() if x.dtype.is_complex() else transposed
 
 
 def _sum_to_shape(x, shape):
@@ -615,8 +616,9 @@ class _ProductOfOperands(jt.Function):
     back over broadcast batch axes, so it differentiates again.
     """
 
-    def __init__(self, a, b, product):
+    def __init__(self, a, b, product, dense_rhs_adjoint=False):
         self.a, self.b, self.product = a, b, product
+        self.dense_rhs_adjoint = dense_rhs_adjoint
 
     def execute(self, a, b):
         return self.product
@@ -624,7 +626,12 @@ class _ProductOfOperands(jt.Function):
     def grad(self, g):
         a, b = self.a, self.b
         g = g.cast(self.product.dtype)
-        da = _sum_to_shape(matmul(g, _conj_last2(b)), a.shape).cast(a.dtype)
+        rhs_adjoint = _conj_last2(b)
+        if self.dense_rhs_adjoint:
+            # A non-foldable right operand is materialized by Torch's
+            # batched matmul. Match the dense FP32 tiling of its adjoint.
+            rhs_adjoint = rhs_adjoint.contiguous()
+        da = _sum_to_shape(matmul(g, rhs_adjoint), a.shape).cast(a.dtype)
         db = _sum_to_shape(matmul(_conj_last2(a), g), b.shape).cast(b.dtype)
         return da, db
 
@@ -646,6 +653,17 @@ def _mkl_batched_matmul_is_available(a, b):
     own CBLAS row (``_blas_batched_matmul``).
     """
     return select_kernel("batched_matmul", a, b, False, False) is _mkl_batched_matmul
+
+
+def _batch_axes_require_copy(operand):
+    """Whether the logical batch axes can be flattened into one view."""
+    stride = getattr(operand, "stride", None)
+    if stride is None:
+        return False
+    batch = [(size, step) for size, step in zip(operand.shape[:-2], stride()[:-2])
+             if size != 1]
+    return any(left_step != right_size * right_step
+               for (_, left_step), (right_size, right_step) in zip(batch, batch[1:]))
 
 
 def matmul(a, b):
@@ -707,17 +725,31 @@ def matmul(a, b):
             )
             if fast is not None:
                 return _keep_operand_grads(a, b, aa, bb, fast)
-        if len_a >= 3 and len_a == len_b:
+        if min(len_a, len_b) >= 3 and (
+            len_a == len_b or jt.core.dispatch_context([a, b])[0] == "acl"
+        ):
             # bmm
             # a: [..., n, m], b: [..., m, k], c:[..., n, k]
             a_base = _transpose_base_last2(a)
             b_base = _transpose_base_last2(b)
-            aa = a_base if a_base is not None else a
-            bb = b_base if b_base is not None else b
-            trans_a, trans_b = a_base is not None, b_base is not None
+            # Torch materializes a non-foldable batch view when flattening
+            # it for BMM. Present that layout on ACL, too: a transposed
+            # descriptor and a dense descriptor select different FP32 tiling.
+            acl_fp32 = (max(len_a, len_b) > 3 and _jittor_dtype_name(a.dtype) == "float32"
+                        and jt.core.dispatch_context([a, b])[0] == "acl")
+            a_copy = acl_fp32 and a_base is not None and _batch_axes_require_copy(a)
+            b_batch_copy = acl_fp32 and _batch_axes_require_copy(b)
+            b_copy = b_batch_copy and b_base is not None
+            aa = a.contiguous() if a_copy else a_base if a_base is not None else a
+            bb = b.contiguous() if b_copy else b_base if b_base is not None else b
+            trans_a = a_base is not None and not a_copy
+            trans_b = b_base is not None and not b_copy
             fast = _matmul_kernel_dispatch("batched_matmul", aa, bb, trans_a, trans_b)
             if fast is not None:
-                return _keep_operand_grads(a, b, aa, bb, fast)
+                if b_batch_copy and not jt.flags.no_grad and not a.is_stop_grad():
+                    return _ProductOfOperands(a, b, fast, dense_rhs_adjoint=True)(a, b)
+                return _keep_operand_grads(
+                    a, b, aa if trans_a else a, bb if trans_b else b, fast)
         shape = []
         len_c = max(len_a, len_b)
         (n, m), (m_, k) = a.shape[-2:], b.shape[-2:]

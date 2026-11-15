@@ -224,6 +224,32 @@ class SetItemACL(jt.Function):
         if not isinstance(slices, tuple):
             slices = (slices,)
         slices = list(slices)
+        # Boolean indices select positions, not their integer 0/1 values.
+        # For a single 1-D mask, reuse the existing IndexPut slice lattice.
+        mask_axes = [i for i, index in enumerate(slices)
+                     if isinstance(index, jt.Var) and _jittor_dtype_name(index.dtype) == "bool"]
+        if _jittor_dtype_name(x.dtype) in ("int32", "int64") and len(mask_axes) == 1 and all(
+            index is Ellipsis or isinstance(index, (int, slice)) or i == mask_axes[0]
+            for i, index in enumerate(slices)
+        ):
+            ellipses = [i for i, index in enumerate(slices) if index is Ellipsis]
+            if len(ellipses) > 1 or len(slices) - len(ellipses) > x.ndim:
+                raise IndexError("invalid masked setitem indices")
+            if ellipses:
+                axis = ellipses[0]
+                slices[axis:axis+1] = [slice(None)] * (x.ndim - len(slices) + 1)
+            slices += [slice(None)] * (x.ndim - len(slices))
+            dim, mask = next((i, index) for i, index in enumerate(slices) if isinstance(index, jt.Var))
+            if mask.ndim != 1 or mask.shape[0] != x.shape[dim]:
+                raise IndexError("mask does not match the indexed axis")
+            indices = jt.where(mask)[0].int32()
+            if indices.numel() == 0:
+                raise NotImplementedError("ACL mixed masked setitem requires a nonempty selection")
+            slices[dim] = indices
+            slices = tuple(index + x.shape[i] if isinstance(index, int) and index < 0 else index
+                           for i, index in enumerate(slices))
+            self.input_slice = slices
+            return self._setitem_slice_index_put(x, slices, value)
         for i, s in enumerate(slices):
             if isinstance(s, int) and s < 0:
                 slices[i] = x.shape[i] + s
@@ -250,8 +276,10 @@ class SetItemACL(jt.Function):
         # construction does not cover.
         def _is_full_slice(s):
             return isinstance(s, slice) and s.start is None and s.stop is None and s.step is None
-        has_var_index = any(isinstance(s, jt.Var) for s in slices_list)
-        mixable = has_var_index and all(
+        # Multiple integer tensor indices share their broadcast axes. The
+        # slice lattice below is for one tensor index plus full-range slices.
+        mixable = (sum(isinstance(s, jt.Var) for s in slices_list) == 1
+                   and any(_is_full_slice(s) for s in slices_list)) and all(
             isinstance(s, jt.Var) or isinstance(s, int) or _is_full_slice(s)
             for s in slices_list
         )
@@ -467,7 +495,7 @@ class SetItemACL(jt.Function):
         # Only dims before the last non-trivial one need index tensors.
         last = -1
         for dim, s in enumerate(slices):
-            if isinstance(s, int):
+            if isinstance(s, (int, jt.Var)):
                 last = dim
             else:
                 if not isinstance(s, slice):
@@ -480,15 +508,18 @@ class SetItemACL(jt.Function):
         indices = []
         for dim in range(last + 1):
             s = slices[dim]
-            if isinstance(s, int):
-                arr = np.array([s], dtype=np.int32)
+            if isinstance(s, jt.Var):
+                index = s
+            elif isinstance(s, int):
+                index = jt.array(np.array([s], dtype=np.int32))
             else:
                 start, stop, step = s.indices(x.shape[dim])
-                arr = np.arange(start, stop, step, dtype=np.int32)
-            lattice.append(arr.size)
+                index = jt.array(np.arange(start, stop, step, dtype=np.int32))
+            count = index.numel()
+            lattice.append(count)
             shape = [1] * (last + 1)
-            shape[dim] = arr.size
-            indices.append(jt.array(arr.reshape(shape)))
+            shape[dim] = count
+            indices.append(index.reshape(shape))
         value_shape = lattice + list(x.shape[last + 1:])
         if isinstance(value, (int, float)):
             value = jt.full(value_shape, value, dtype=x.dtype)

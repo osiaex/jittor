@@ -25,6 +25,7 @@ The three branches the CodeOp path carried are all still here:
 import jittor as jt
 
 from .._soc import allow_reduced_precision
+from ._code import acl_emit, acl_program, canonical_dtype_name
 
 
 def _allow_reduced_precision():
@@ -94,6 +95,33 @@ class MatmulACL:
             return out.reshape(list(x1.shape[:-1]) + [out.shape[-1]])
         x1, x2 = align_operands(x1, x2)
         return mapped_matmul(x1, x2, False, self.trans_x2)
+
+
+class _LinearBiasACL(jt.Function):
+    def execute(self, x, weight, bias):
+        self.x, self.weight = x, weight
+        program = acl_program("LinearBias", 3, 1)
+        return acl_emit(program, [x, weight, bias], [x.dtype],
+                        [(x.shape[0], weight.shape[0])])[0]
+
+    def grad(self, dout):
+        return (mapped_matmul(dout, self.weight),
+                mapped_matmul(dout, self.x, trans_a=True),
+                dout.sum(0))
+
+
+def linear_bias_acl(x, weight, bias):
+    rows = x.numel() // x.shape[-1]
+    flat = x.reshape((rows, x.shape[-1]))
+    result = _LinearBiasACL.apply(flat, weight, bias)
+    return result.reshape(x.shape[:-1] + (weight.shape[0],))
+
+
+def linear_bias_supported(x, weight, bias):
+    return (x.ndim >= 1 and weight.ndim == 2 and bias.ndim == 1
+            and x.numel() > 0 and weight.numel() > 0
+            and all(canonical_dtype_name(v.dtype) == "float32" for v in (x, weight, bias))
+            and not allow_reduced_precision())
 
 
 class PackedMatmulACL:

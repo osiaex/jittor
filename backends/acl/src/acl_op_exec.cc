@@ -187,6 +187,7 @@ namespace jittor
         {ns_abs, "Abs"},
         {ns_exp, "Exp"},
         {ns_log, "Log"},
+        {ns_log1p, "Log1p"},
         {ns_sqrt, "Sqrt"},
         {ns_ceil, "Ceil"},
         {ns_floor, "Floor"},

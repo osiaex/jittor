@@ -120,3 +120,33 @@ def test_unsupported_npu_apis_refuse_instead_of_reporting_zero():
                  "get_device_properties", "current_stream", "mem_get_info"):
         with pytest.raises(NotImplementedError):
             getattr(torch.npu, name)()
+
+
+@pytest.mark.skipif(os.environ.get("JITTOR_TEST_DEVICES") != "npu",
+                    reason="requires a selected ACL device")
+def test_npu_manual_seed_all_replays_without_touching_host_rng():
+    host_state = jt.core.rng_state("cpu")
+    device_state = jt.core.rng_state("acl")
+    try:
+        torch.cuda.manual_seed_all(31)
+        assert jt.core.rng_state("acl") == device_state
+        torch.npu.manual_seed_all(47)
+        first = torch.rand(19, device="npu")
+        assert first.device.type == "npu"
+        expected = first.cpu().tolist()
+        torch.npu.manual_seed_all(47)
+        assert torch.rand(19, device="npu").cpu().tolist() == expected
+        assert jt.core.rng_state("cpu") == host_state
+    finally:
+        jt.core.set_rng_state("acl", device_state)
+
+
+@pytest.mark.skipif(os.environ.get("JITTOR_TEST_DEVICES") != "npu",
+                    reason="requires a selected ACL device")
+def test_npu_detached_loss_accumulator_stays_frozen():
+    accumulator = torch.tensor(0., device="npu")
+    loss = torch.tensor(2., device="npu", requires_grad=True).detach()
+    accumulator.add_(loss, alpha=3)
+    assert not accumulator.requires_grad and accumulator.item() == 6.
+    accumulator -= accumulator
+    assert not accumulator.requires_grad and accumulator.item() == 0.

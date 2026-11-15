@@ -36,6 +36,7 @@
 #include <aclops/cross_entropy_loss_op_acl.h>
 #include <aclops/sigmoid_op_acl.h>
 #include <aclops/softmax_op_acl.h>
+#include <aclops/softplus_op_acl.h>
 #include <aclops/stack_op_acl.h>
 #include <aclops/nantonum_op_acl.h>
 #include <aclops/rope_op_acl.h>

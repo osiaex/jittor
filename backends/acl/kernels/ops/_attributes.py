@@ -10,6 +10,8 @@ SCHEMAS = {
     "GeluBackward": {"approximate": {"type": "int64"}},
     "Softmax": {"dim": {"type": "int64"}},
     "SoftmaxBackward": {"dim": {"type": "int64"}},
+    "LogSoftmax": {"dim": {"type": "int64"}},
+    "LogSoftmaxBackward": {"dim": {"type": "int64"}},
     "SwiGlu": {"dim": {"type": "int64"}},
     "Triu": {"diagonal": {"type": "int64"}},
     "Flip": {"axes": {"type": "int64[]"}},

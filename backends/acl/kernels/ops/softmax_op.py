@@ -18,3 +18,20 @@ class SoftmaxACL(jt.Function):
             outputs=[jt.empty(grad_output.shape)],
             attributes={"dim": self.dim},
         )[0]
+
+
+class LogSoftmaxACL(jt.Function):
+    def execute(self, x, dim):
+        self.dim = dim
+        self.output = acl_code(
+            "LogSoftmax", [x], outputs=[jt.empty(x.shape, x.dtype)],
+            attributes={"dim": dim},
+        )[0]
+        return self.output
+
+    def grad(self, grad_output):
+        return acl_code(
+            "LogSoftmaxBackward", [grad_output, self.output],
+            outputs=[jt.empty(self.output.shape, self.output.dtype)],
+            attributes={"dim": self.dim},
+        )[0]

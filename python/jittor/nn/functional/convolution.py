@@ -239,6 +239,11 @@ def conv3d(x, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     out_channels = weight.shape[0]
     if groups <= 0:
         raise ValueError("groups must be a positive integer")
+    if bias is not None:
+        biased = select_kernel("conv3d.bias", x, weight, stride, padding, dilation,
+                               groups, bias=bias)
+        if biased is not None:
+            return biased(x, weight, stride, padding, dilation, groups, bias=bias)
     kernel = select_kernel("conv3d", x, weight, stride, padding, dilation, groups)
     if kernel is not None:
         y = kernel(x, weight, stride, padding, dilation, groups)

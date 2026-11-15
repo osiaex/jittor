@@ -44,13 +44,18 @@ def unfold(input, dimension, size, step):
     """Return sliding windows along ``dimension`` as a new trailing dim.
 
     ``out[..., i, ..., j] == input[..., i * step + j, ...]``. This is a
-    materialized reindex, not the stride view Torch returns.
+    materialized result, not the stride view Torch returns.
     """
     from importlib import import_module as _import_module
     _owner = _import_module(__package__)
     rank = input.ndim
     axis = dimension if dimension >= 0 else dimension + rank
     count = (input.shape[axis] - size) // step + 1
+    if size == step and count > 0:
+        shape = tuple(input.shape)
+        selection = (slice(None),) * axis + (slice(0, count * size),)
+        grouped = input[selection].reshape(*shape[:axis], count, size, *shape[axis + 1:])
+        return grouped.movedim(axis + 1, -1).clone()
     out_shape = list(input.shape)
     out_shape[axis] = count
     out_shape.append(size)

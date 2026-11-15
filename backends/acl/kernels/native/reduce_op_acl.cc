@@ -28,9 +28,21 @@
 #include "aclnn/aclnn.h"
 #include "aclnnop/aclnn_prod.h"
 #include "reduce_op_acl.h"
+#include <aclnnop/aclnn_logsumexp.h>
 
 namespace jittor
 {
+    void LogSumExpLastOpRunner::executeOp(AclOpRegistry::const_iterator &it)
+    {
+        int64_t axis = 1;
+        std::unique_ptr<aclIntArray, decltype(&aclDestroyIntArray)> dims(
+            aclCreateIntArray(&axis, 1), aclDestroyIntArray);
+        CHECK(dims);
+        ret = aclnnLogSumExpGetWorkspaceSize(inputTensors[0], dims.get(), false,
+            outputTensors[0], &workspaceSize, &executor);
+        launch(ret, aclnnLogSumExp, true);
+    }
+
     ReduceOpRunner::ReduceOpRunner() : BaseOpRunner("reduce")
     {
         use_nchw = false;

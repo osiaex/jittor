@@ -27,6 +27,7 @@
 #include "codegen/opt/tuner_manager.h"
 #include "utils/str_utils.h"
 #include "aclnn/aclnn.h"
+#include <aclnnop/aclnn_addmm.h>
 #include "matmul_op_acl.h"
 
 namespace jittor
@@ -66,6 +67,25 @@ namespace jittor
         acl_check_fp32_cube(cube_math_type, in_[0]->dtype(), "MatMul");
         ret = aclnnMatmulGetWorkspaceSize(inputTensors[0], inputTensors[1], outputTensors[0], cube_math_type, &workspaceSize, &executor);
         launch(ret, aclnnMatmul, true);
+    }
+
+    LinearBiasOpRunner::LinearBiasOpRunner()
+    {
+        name = "LinearBias";
+        jt_name = "matmul_trans_1";
+    }
+
+    void LinearBiasOpRunner::executeOp(AclOpRegistry::const_iterator &it)
+    {
+        acl_check_fp32_cube(cube_math_type, in_[0]->dtype(), "LinearBias");
+        int64_t one = 1;
+        std::unique_ptr<aclScalar, decltype(&aclDestroyScalar)> scale(
+            aclCreateScalar(&one, ACL_INT64), aclDestroyScalar);
+        CHECK(scale);
+        ret = aclnnAddmmGetWorkspaceSize(inputTensors[2], inputTensors[0],
+            inputTensors[1], scale.get(), scale.get(), outputTensors[0],
+            cube_math_type, &workspaceSize, &executor);
+        launch(ret, aclnnAddmm, true);
     }
 
     PackedMatMulOpRunner::PackedMatMulOpRunner() : BaseOpRunner("PackedMatMul") {}
