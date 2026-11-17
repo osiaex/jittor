@@ -9,6 +9,7 @@ import numpy as np
 import jittor as jt
 import torch
 from jittor.compat.torch import _GradScaler, _clip_grad_norm_device
+from jittor.compat.torch.grad import _clip_grads_with_norm_device
 
 
 _DEVICES = [("cpu", 0)] + ([ ("cuda", 1) ] if _test_capability.any_accelerator_enabled(backend=jt) else [])
@@ -96,6 +97,139 @@ class TestGradientManagement(unittest.TestCase):
                 self.assertLessEqual(float(got_norm), 1.00001)
 
         both_devices(body)
+
+    def test_clip_grad_norm_does_not_concat_gradient_payloads(self):
+        # Catch a model-sized temporary using only small CPU gradients.
+        with jt.flag_scope(use_cuda=0):
+            for p in (0.0, 1.0, 2.0, 3.5, -1.0, float("inf"), float("-inf")):
+                grads = [jt.array(np.full(64, 2.0, dtype="float32")),
+                         jt.array(np.full(32, 4.0, dtype="float32"))]
+                original_concat = jt.concat
+
+                def checked_concat(values, *args, **kwargs):
+                    values = list(values)
+                    self.assertLessEqual(sum(int(v.numel()) for v in values), 8)
+                    return original_concat(values, *args, **kwargs)
+
+                jt.concat = checked_concat
+                try:
+                    total = _clip_grad_norm_device(grads, 1.0, p)
+                finally:
+                    jt.concat = original_concat
+                if p == 0:
+                    expected = 2.0
+                elif p == float("inf"):
+                    expected = 4.0
+                elif p == float("-inf"):
+                    expected = 2.0
+                else:
+                    expected = (64 * 2.0 ** p + 32 * 4.0 ** p) ** (1.0 / p)
+                self.assertAlmostEqual(float(total.item()), expected, delta=abs(expected)*2e-5)
+
+    def test_clip_grad_norm_empty_tensor_semantics(self):
+        with jt.flag_scope(use_cuda=0):
+            for p in (-1.0, float("inf"), float("-inf")):
+                grad = jt.array(np.array([], dtype="float32"))
+                with self.assertRaisesRegex(RuntimeError, "empty tensor"):
+                    _clip_grad_norm_device([grad], 1.0, p)
+            for p in (0.0, 1.0, 2.0):
+                grad = jt.array(np.array([], dtype="float32"))
+                total = _clip_grad_norm_device([grad], 1.0, p)
+                self.assertEqual(float(total.item()), 0.0)
+
+    def test_clip_grad_norm_half_and_mixed_precision(self):
+        with jt.flag_scope(use_cuda=0):
+            grad = jt.array(np.array([3.0, 4.0], dtype="float16"))
+            total = _clip_grad_norm_device([grad], 1.0)
+            self.assertEqual(str(total.dtype), "float16")
+            self.assertEqual(float(total.item()), 5.0)
+            np.testing.assert_array_equal(
+                grad.numpy(), np.array([0.599609375, 0.7998046875], dtype="float16"))
+
+            grads = [jt.array(np.array([0.101, 0.202], dtype="float16")),
+                     jt.array(np.array([0.303], dtype="float32"))]
+            total = _clip_grad_norm_device(grads, 0.1)
+            self.assertEqual(str(total.dtype), "float32")
+            self.assertAlmostEqual(float(total.item()), 0.37789976596832275, places=6)
+
+            grads = [jt.array(np.array([0.49, 0.89, 0.93, 1.0], dtype="float16")),
+                     jt.array(np.array([1.0], dtype="float32"))]
+            _clip_grad_norm_device(grads, 0.24372333230597973)
+            np.testing.assert_array_equal(
+                grads[0].numpy(), np.array(
+                    [0.06048583984375, 0.10986328125, 0.11480712890625,
+                     0.12347412109375], dtype="float16"))
+
+    def test_clip_grad_norm_bfloat16_and_complex128(self):
+        with jt.flag_scope(use_cuda=0):
+            grad = jt.array(np.array([3.0, 4.0], dtype="float32")).cast("bfloat16")
+            total = _clip_grad_norm_device([grad], 1.0)
+            self.assertEqual(str(total.dtype), "bfloat16")
+            self.assertEqual(float(total.item()), 5.0)
+            np.testing.assert_array_equal(
+                grad.float32().numpy(), np.array([0.6015625, 0.80078125]))
+
+            grad = jt.array(np.array([3.0 + 4.0j], dtype="complex128"),
+                            dtype=torch.complex128)
+            total = _clip_grad_norm_device([grad], 1.0)
+            self.assertEqual(str(total.dtype), "float64")
+            self.assertEqual(float(total.item()), 5.0)
+            np.testing.assert_allclose(
+                grad.numpy(), np.array([3.0 + 4.0j]) / 5.000001, rtol=1e-12)
+
+    def test_clip_grad_norm_nonfinite_limit(self):
+        with jt.flag_scope(use_cuda=0):
+            for limit, value in ((float("inf"), float("inf")),
+                                 (float("inf"), float("nan")),
+                                 (float("nan"), 1.0)):
+                grad = jt.array(np.array([1.0, value], dtype="float32"))
+                _clip_grad_norm_device([grad], limit)
+                self.assertTrue(np.isnan(grad.numpy()).all())
+
+    def test_clip_grad_norm_single_element_extremes(self):
+        with jt.flag_scope(use_cuda=0):
+            for p in (-3.0, -1.0, 0.5, 2.0, 3.5,
+                      float("inf"), float("-inf")):
+                for value in (1e20, 1e-23, 0.0, np.inf, np.nan):
+                    grad = jt.array(np.array([value], dtype="float32"))
+                    total = _clip_grad_norm_device([grad], 1.0, p)
+                    actual = float(total.item())
+                    expected = float(np.float32(abs(value)))
+                    if np.isnan(expected):
+                        self.assertTrue(np.isnan(actual), (p, value))
+                    else:
+                        self.assertEqual(actual, expected, (p, value))
+
+    def test_clip_grad_norm_singleton_group_dtype(self):
+        class SingletonGroup:
+            def size(self):
+                return 1
+
+        with jt.flag_scope(use_cuda=0):
+            grad = jt.array(np.array([3.0, 4.0], dtype="float16"))
+            object.__setattr__(grad, "_fsdp_norm_group", SingletonGroup())
+            total = _clip_grad_norm_device([grad], 1.0, shard_reduce=True)
+            self.assertEqual(str(total.dtype), "float16")
+            np.testing.assert_array_equal(
+                grad.numpy(), np.array([0.599609375, 0.7998046875], dtype="float16"))
+
+    def test_clip_grads_with_supplied_lower_precision_norm(self):
+        with jt.flag_scope(use_cuda=0):
+            grad = jt.array(np.array([1e100], dtype="float64"), dtype="float64")
+            total = jt.array(np.array(2.0, dtype="float16"), dtype="float16")
+            self.assertEqual(str(grad.dtype), "float64")
+            np.testing.assert_array_equal(grad.numpy(), np.array([1e100], dtype="float64"))
+            _clip_grads_with_norm_device([grad], 1.0, total)
+            self.assertEqual(str(grad.dtype), "float64")
+            np.testing.assert_allclose(grad.numpy(), [5e99], rtol=1e-15)
+
+    def test_clip_grad_norm_float64_scalar_precision(self):
+        with jt.flag_scope(use_cuda=0):
+            grad = jt.array(np.array([3.0, 4.0], dtype="float64"), dtype="float64")
+            total = _clip_grad_norm_device([grad], 1.0)
+            self.assertEqual(str(total.dtype), "float64")
+            np.testing.assert_allclose(
+                grad.numpy(), np.array([3.0, 4.0]) / 5.000001, rtol=1e-15)
 
     def test_clip_grad_norm_nonfinite_error(self):
         def body(dev):

@@ -617,15 +617,50 @@ class _ProductOfOperands(jt.Function):
 
     def __init__(self, a, b, product):
         self.a, self.b, self.product = a, b, product
+        # Snapshot forward eligibility, not the targets requested later from
+        # autograd.grad. A frozen operand can still be needed by the other's
+        # gradient, even though jt.Function does not tape stopped inputs.
+        # Tensor's Python matmul dispatch can reach this shared native
+        # implementation outside a dynamic frontend scope. Its type carries
+        # the frontend's construction policy even at that boundary.
+        policy = (jt.core._get_autograd_policy()
+                  | getattr(type(a), "_frontend_autograd_policy", 0)
+                  | getattr(type(b), "_frontend_autograd_policy", 0))
+        self._torch_saved_policy = bool(policy & 2)
+        if self._torch_saved_policy:
+            self._needs_a, self._needs_b = bool(a.requires_grad), bool(b.requires_grad)
+            self._saved_a_version = tuple(a._saved_storage_version()) if self._needs_b else None
+            self._saved_b_version = tuple(b._saved_storage_version()) if self._needs_a else None
 
     def execute(self, a, b):
         return self.product
 
+    @staticmethod
+    def _check_saved_version(value, expected):
+        # A legal requires_grad_ transition can rebind the Var holder to a
+        # detached alias of the same logical storage. Its Var id changes
+        # without a mutation; the shared token and its version do not.
+        if expected is not None and tuple(value._saved_storage_version())[1:] != expected[1:]:
+            raise RuntimeError(
+                "one of the variables needed for gradient computation has "
+                "been modified by an inplace operation")
+
     def grad(self, g):
         a, b = self.a, self.b
         g = g.cast(self.product.dtype)
-        da = _sum_to_shape(matmul(g, _conj_last2(b)), a.shape).cast(a.dtype)
-        db = _sum_to_shape(matmul(_conj_last2(a), g), b.shape).cast(b.dtype)
+        if not self._torch_saved_policy:
+            da = _sum_to_shape(matmul(g, _conj_last2(b)), a.shape).cast(a.dtype)
+            db = _sum_to_shape(matmul(_conj_last2(a), g), b.shape).cast(b.dtype)
+            return da, db
+        # Both sides eligible at forward remain checked even when a later
+        # autograd.grad request names only one target.
+        da = db = None
+        if self._needs_a:
+            self._check_saved_version(b, self._saved_b_version)
+            da = _sum_to_shape(matmul(g, _conj_last2(b)), a.shape).cast(a.dtype)
+        if self._needs_b:
+            self._check_saved_version(a, self._saved_a_version)
+            db = _sum_to_shape(matmul(_conj_last2(a), g), b.shape).cast(b.dtype)
         return da, db
 
 

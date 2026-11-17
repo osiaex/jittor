@@ -1,17 +1,21 @@
 """CUDA depthwise convolution forward and gradient kernels."""
 
 import jittor as jt
+from jittor._core.dtypes import dtype_name
 from jittor._runtime.backend_libraries import library_resource
 
 
 def depthwise_forward(x, weight, output_shape, stride, padding, dilation):
     Kh, Kw = weight.shape[-2:]
+    # Match float opmath for reduced-precision CUDA convolution. Narrow only
+    # at the output store, after the complete dot product.
+    accum_type = "float" if dtype_name(x.dtype) in ("float16", "bfloat16") else "input_type"
     return jt.code(
             output_shape,
             x.dtype,
             [x, weight],
             cuda_header = """
-        template <typename T,
+        template <typename T, typename Acc,
             int filter_height,
             int filter_width,
             int stride_height,
@@ -36,7 +40,7 @@ def depthwise_forward(x, weight, output_shape, stride, padding, dilation):
                     const int c_out = blockIdx.x;
 
                     const int c_in = c_out;
-                    T value = 0;
+                    Acc value = 0;
                     const int h_in_start = -padding_height + h_out * stride_height;
                     const int w_in_start = -padding_width + w_out * stride_width;
                     const int h_in_end = h_in_start + filter_height * dilate_height;
@@ -57,14 +61,15 @@ def depthwise_forward(x, weight, output_shape, stride, padding, dilation):
                             if (h_in >= 0 && h_in < input_height && w_in >= 0 &&
                                 w_in < input_width) {
                                 const int offset = in_offset + h_in * input_width + w_in;
-                                value += r_weight[h_f * filter_width + w_f] * input_data[offset];
+                                value += static_cast<Acc>(r_weight[h_f * filter_width + w_f]) *
+                                    static_cast<Acc>(input_data[offset]);
                             }
                         }
                     }
                     int index =
                         ((batch * gridDim.x + c_out) * output_height + h_out) * output_width +
                         w_out;
-                    output_data[index] = value;
+                    output_data[index] = static_cast<T>(value);
                 }
             }
         }
@@ -99,7 +104,7 @@ def depthwise_forward(x, weight, output_shape, stride, padding, dilation):
             dim3 threads(std::min(output_width, thread), blocks, 1);
             dim3 grid(output_channels, batch_size, 1);
             KernelDepthwiseConv<
-                input_type, ksize_height, ksize_width,
+                input_type, {accum_type}, ksize_height, ksize_width,
                 stride_height, stride_width>
             <<<grid, threads>>>(
                 input_p, filter_p, batch_size, output_channels, output_height,
@@ -112,7 +117,13 @@ def depthwise_forward(x, weight, output_shape, stride, padding, dilation):
 
 def depthwise_backward(x, weight, grad, kernel_size, stride, padding, dilation):
     Kh, Kw = kernel_size
-    return jt.code([x.shape, weight.shape], [x.dtype, weight.dtype], [x, weight, grad],
+    narrow = dtype_name(x.dtype) in ("float16", "bfloat16")
+    accum_type = "float" if narrow else "input_type"
+    # Filter gradients combine several warps. Accumulate their atomic adds
+    # in float32 as well, then cast the completed gradient once.
+    weight_grad_dtype = "float32" if narrow else weight.dtype
+    input_grad, weight_grad = jt.code([x.shape, weight.shape],
+        [x.dtype, weight_grad_dtype], [x, weight, grad],
         cuda_header = f"#include <{library_resource('cub', 'home')}cub/cub.cuh>"+"""
     template <typename T>
     __device__ __inline__ void CudaAtomicAddWithWarp(T* sum, T value) {
@@ -124,7 +135,7 @@ def depthwise_backward(x, weight, grad, kernel_size, stride, padding, dilation):
     }
 
     // CUDA kernel to compute the depthwise convolution backprop w.r.t input.
-    template <typename T,
+    template <typename T, typename Acc,
         int filter_height,
         int filter_width,
         int stride_height,
@@ -157,7 +168,7 @@ def depthwise_backward(x, weight, grad, kernel_size, stride, padding, dilation):
 
                 int w_out_start = w_in - (filter_width - 1) * dilate_width + padding_width;
 
-                T value = 0;
+                Acc value = 0;
                 int index =
                     ((batch * gridDim.x + c_in) * input_height + h_in) * input_width +
                     w_in;
@@ -177,18 +188,18 @@ def depthwise_backward(x, weight, grad, kernel_size, stride, padding, dilation):
                                 output_width +
                             s_w_out;
                         value +=
-                            output_grad_data[output_grad_offset] *
-                            r_weight[h_f * filter_width + w_f];
+                            static_cast<Acc>(output_grad_data[output_grad_offset]) *
+                            static_cast<Acc>(r_weight[h_f * filter_width + w_f]);
                         }
                     }
                 }
-                input_grad_data[index] = value;
+                input_grad_data[index] = static_cast<T>(value);
             }
         }
     }
 
     // Cuda kernel to compute the depthwise convolution backprop w.r.t. filter.
-    template <typename T>
+    template <typename T, typename Acc>
     __global__ void KernelDepthwiseConvFilterGrad(
         const T* output_grad_data, const T* input_data, const int num,
         const int output_channels, const int output_height, const int output_width,
@@ -196,8 +207,8 @@ def depthwise_backward(x, weight, grad, kernel_size, stride, padding, dilation):
         const int filter_height,
         const int filter_width, const int stride_height, const int stride_width,
         const int padding_height, const int padding_width, const int dilate_height,
-        const int dilate_width, T* filter_grad_data) {
-        T s = 0;
+        const int dilate_width, Acc* filter_grad_data) {
+        Acc s = 0;
 
         int gbid = (((blockIdx.z * blockDim.z + threadIdx.z) * gridDim.y) + blockIdx.y) * gridDim.x + blockIdx.x;
 
@@ -223,8 +234,8 @@ def depthwise_backward(x, weight, grad, kernel_size, stride, padding, dilation):
                                             image_hk) *
                                             input_width +
                                         image_wk;
-                            s += output_grad_data[gaid(bid, kernel_id, image_h, image_w)] *
-                                input_data[input_id];
+                            s += static_cast<Acc>(output_grad_data[gaid(bid, kernel_id, image_h, image_w)]) *
+                                 static_cast<Acc>(input_data[input_id]);
 
                     #undef gaid
                 }
@@ -266,7 +277,7 @@ def depthwise_backward(x, weight, grad, kernel_size, stride, padding, dilation):
         dim3 threads(std::min(input_width, thread), blocks, 1);
         dim3 grid(input_channels, batch_size, 1);
         KernelDepthwiseConvInputGradCFilter<
-            input_type, ksize_height, ksize_width
+            input_type, {accum_type}, ksize_height, ksize_width
             , stride_height, stride_width>
             <<<grid, threads, 0>>>(
             input_p, output_grad_p, filter_p, batch_size,
@@ -289,7 +300,7 @@ def depthwise_backward(x, weight, grad, kernel_size, stride, padding, dilation):
         cudaMemsetAsync(filter_grad_p, 0, filter_grad->size);
 
         KernelDepthwiseConvFilterGrad<
-            input_type><<<grid, threads, 0>>>(
+            input_type, out1_type><<<grid, threads, 0>>>(
             output_grad_p, input_p, batch_size, output_channels,
             output_height, output_width, input_channels, input_height,
             input_width, ksize_height, ksize_width,
@@ -297,3 +308,4 @@ def depthwise_backward(x, weight, grad, kernel_size, stride, padding, dilation):
             dilate_height, dilate_width, filter_grad_p);
     """
     )
+    return input_grad, weight_grad.cast(weight.dtype) if narrow else weight_grad

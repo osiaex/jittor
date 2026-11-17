@@ -96,14 +96,16 @@ class _CrossEntropyRows(jt.Function):
         # Spelled exactly as the composite did: under the Torch frontend
         # `x.max(1)` is torch's (values, indices) pair.
         top = x.max([1], keepdims=True)
-        lse = ((x - top).exp().sum([1], keepdims=True).log() + top).reshape((rows,))
+        # Keep the loss and softmax in shifted coordinates. Adding the row
+        # maximum back can round away the entire log denominator.
+        log_denom = (x - top).exp().sum([1], keepdims=True).log()
         picked = x.reindex([rows], ["i0", "@e0(i0)"], extras=[safe])
-        self.saved = (x, safe, lse, target_weight)
-        return (lse - picked) * target_weight
+        self.saved = (x, safe, top, log_denom, target_weight)
+        return (log_denom.reshape((rows,)) - (picked - top.reshape((rows,)))) * target_weight
 
     def grad(self, dloss):
         # Not cleared: a retain_graph backward may call grad() again.
-        x, safe, lse, target_weight = self.saved
+        x, safe, top, log_denom, target_weight = self.saved
         scale = dloss * target_weight
         # `scale` at each row's target column and 0 elsewhere, built by the
         # reindex itself -- a one-hot from `index(1) == target` would
@@ -111,7 +113,8 @@ class _CrossEntropyRows(jt.Function):
         at_target = scale.reindex(x.shape, ["i0"], overflow_value=0,
                                   overflow_conditions=["i1 != @e0(i0)"],
                                   extras=[safe])
-        dx = (x - lse.broadcast(x, [1])).exp() * scale.broadcast(x, [1]) - at_target
+        log_probs = (x - top) - log_denom
+        dx = log_probs.exp() * scale.broadcast(x, [1]) - at_target
         if self.narrow_dtype is not None:
             dx = dx.cast(self.narrow_dtype)
         return dx, None, None

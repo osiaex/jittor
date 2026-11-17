@@ -185,12 +185,19 @@ struct Var : Node {
     int64 numel();
     void set_shape(NanoVector shape);
     bool alloc(Allocator* allocator);
-    inline void share_with(Var* x, size_t offset = 0) {
+    // Reuse an allocation without claiming a user-visible storage alias.
+    // Graph optimizations can reuse buffers for distinct logical tensors;
+    // their mutation counters must remain independent.
+    inline void share_allocation_with(Var* x, size_t offset = 0) {
         CHECK_EXIST;
-        std::atomic_store(&storage_mutation_version, x->storage_version_token());
         share_src = x;
         share_offset = offset;
         storage_offset_bytes = x->storage_offset_bytes + offset;
+    }
+    inline void share_with(Var* x, size_t offset = 0) {
+        CHECK_EXIST;
+        std::atomic_store(&storage_mutation_version, x->storage_version_token());
+        share_allocation_with(x, offset);
     }
     // Whether alloc() still owes this var an aliased buffer.
     inline bool is_sharing() const { CHECK_EXIST; return share_src != nullptr; }

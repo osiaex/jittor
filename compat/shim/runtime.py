@@ -336,8 +336,11 @@ def _activate_once(
         pass
     preloaded = _preload_jittor_cores(verbose=verbose)
 
+    # A setup.py child may import torch before the parent build finishes.
+    # Do not rediscover its inherited project/PYTHONPATH and recurse into builds.
+    build_child = is_truthy(os.environ.get("JITTOR_TORCH_EXT_BUILD_CHILD"))
     scanned: List[NativeExtension] = []
-    if auto_scan_extensions:
+    if auto_scan_extensions and not build_child:
         scanned.extend(scan_extension_dirs(project_root=project_dir, max_depth=max_scan_depth))
         py_roots = _pythonpath_extension_roots(project_dir, runtime)
         if py_roots:
@@ -364,7 +367,7 @@ def _activate_once(
     child_env["PYTHONPATH"] = _pythonpath_for_child(child_paths)
 
     built: List[str] = []
-    skip_build = is_truthy(os.environ.get("JITTOR_TORCH_SKIP_EXT_BUILD"))
+    skip_build = build_child or is_truthy(os.environ.get("JITTOR_TORCH_SKIP_EXT_BUILD"))
     if build_extensions and not skip_build:
         buildable = [ext for ext in scanned if ext.setup_py]
         if buildable:

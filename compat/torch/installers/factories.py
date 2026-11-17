@@ -11,6 +11,7 @@ from jittor._core.dtypes import dtype_name as _jittor_dtype_name
 
 import functools
 import inspect
+import math
 from ..context import get_install_context
 from ..api_delegates import bind_delegates
 
@@ -94,7 +95,14 @@ def _invoke_factory(name, args, kwargs):
             if isinstance(value, jt.Var):
                 requested = "cuda" if value.is_cuda else "cpu"
                 break
+    if requested is None and isinstance(like, jt.Var) and getattr(like, "_jittor_torch_meta", False):
+        requested = "meta"
+    if requested is None and like is None:
+        from ..types import active_device_context
+        requested = active_device_context()
     meta = _is_meta_device_request(requested)
+    if name == "arange" and _uses_cuda_fp32_arange(requested, args, kwargs):
+        implementation = functools.partial(_constructor_adapter, "arange", _cuda_fp32_arange, True)
     # torch's meta tensors carry shape/dtype only; Jittor has no meta backend,
     # so the same contract `with torch.device("meta")` uses applies here: the
     # Var is really allocated (on the host) and reports "meta" via the
@@ -106,8 +114,50 @@ def _invoke_factory(name, args, kwargs):
         try:
             result._jittor_torch_meta = True
         except (AttributeError, TypeError) as exc:
-            swallowed("torch/installers/factories.py _invoke_factory: meta mark", exc)
+            raise RuntimeError("failed to mark a meta factory result") from exc
     return result
+
+
+def _uses_cuda_fp32_arange(device, args, kwargs):
+    if "out" in kwargs or _dtype_to_str(kwargs.get("dtype")) != "float32":
+        return False
+    bounds = (*args, *(kwargs[k] for k in ("start", "end", "step") if k in kwargs))
+    if not bounds or not all(isinstance(x, (int, float, np.integer, np.floating)) for x in bounds):
+        return False
+    from ..frontend import _placement_request
+
+    backend, _ = _placement_request(jt, device)
+    return backend == 1
+
+
+def _cuda_fp32_arange(start=0, end=None, step=1, dtype="float32"):
+    if end is None:
+        start, end = 0, start
+    start, end, step = float(start), float(end), float(step)
+    if not math.isfinite(start) or not math.isfinite(end) or not math.isfinite(step):
+        raise RuntimeError("arange requires finite bounds and step")
+    if step == 0:
+        raise RuntimeError("step must be nonzero")
+    if (end < start and step > 0) or (end > start and step < 0):
+        raise RuntimeError("upper bound and lower bound inconsistent with step sign")
+    size = (end - start) / step
+    if not 0 <= size < 2**63:
+        raise RuntimeError("invalid arange size")
+    length = math.ceil(size)
+    if length == 0:
+        return jt.empty((0,), dtype)
+    # Torch computes the length from the original double bounds, while each
+    # CUDA float element uses a single rounded multiply-add on float operands.
+    bounds = jt.array([start, step], dtype=dtype)
+    return jt.code((length,), dtype, [bounds], backend="cuda", cuda_header=r"""
+__global__ static void torch_arange_fp32(long long n, const float* bounds, float* output) {
+    const long long i = static_cast<long long>(blockIdx.x) * blockDim.x + threadIdx.x;
+    if (i < n) output[i] = fmaf(bounds[1], static_cast<float>(i), bounds[0]);
+}
+""", cuda_src=r"""
+const long long n = out0->num;
+torch_arange_fp32<<<(n + 255) / 256, 256>>>(n, in0_p, out0_p);
+""")
 
 
 def arange(*args, **kwargs):
@@ -139,6 +189,9 @@ def empty_like(*args, **kwargs):
 
 
 def full(*args, **kwargs):
+    value = kwargs.get("fill_value", args[1] if len(args) > 1 else None)
+    if kwargs.get("dtype") is None and isinstance(value, (bool, int)):
+        kwargs = dict(kwargs, dtype="bool" if isinstance(value, bool) else "int64")
     return _invoke_factory("full", args, kwargs)
 
 

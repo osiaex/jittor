@@ -526,6 +526,10 @@ def _array_keep_dtype(data):
 
 
 def tensor(data, dtype=None, device=None, requires_grad=False, **kw):
+    from ...types import active_device_context
+    from ..factories import _is_meta_device_request
+    requested = device if device is not None else active_device_context()
+    meta = _is_meta_device_request(requested)
     g = compatibility_owner(jt)
     Var = g.Var
     with tensor_frontend(Var, device=device, like=data):
@@ -582,6 +586,8 @@ def tensor(data, dtype=None, device=None, requires_grad=False, **kw):
         if requires_grad:
             v.requires_grad_(True)
             _torch_register_leaf(v)
+        if meta:
+            v._jittor_torch_meta = True
         return v
 
 
@@ -914,6 +920,31 @@ def _check_not_implemented(condition, message=None):
     return _check_condition(condition, message, NotImplementedError)
 
 
+def _check_with(error_type, condition, message=None):
+    if not isinstance(condition, _builtins.bool):
+        raise TypeError(f"cond must be a bool, but got {type(condition)}")
+    if condition:
+        return
+    assert issubclass(error_type, Exception) and not issubclass(error_type, Warning)
+    if message is None:
+        text = ("Expected cond to be True, but got False. (Could this error "
+                "message be improved? If so, please report an enhancement request "
+                "to PyTorch.)")
+    else:
+        if not callable(message):
+            raise TypeError("message must be a callable")
+        text = str(message())
+    raise error_type(text)
+
+
+def _check_tensor_all_with(error_type, condition, message=None):
+    if not isinstance(condition, jt.Var):
+        raise TypeError(f"cond must be a tensor, but got {type(condition)}")
+    if _var_dtype_name(condition) != 'bool':
+        raise TypeError(f"cond tensor must have dtype torch.bool, but got {condition.dtype}")
+    _check_with(error_type, bool(condition.all().item()), message)
+
+
 def _check_tensor_all(condition, message=None):
     return _check_condition(condition, message, RuntimeError)
 
@@ -1020,6 +1051,8 @@ def install(ctx):
     # may be a zero-arg callable that torch invokes lazily only on failure. The
     # condition is usually a python bool but can be a bool tensor (_check_tensor_all).
     g._check = _check
+    g._check_with = _check_with
+    g._check_tensor_all_with = _check_tensor_all_with
     g._check_is_size = _check_is_size
     g._check_index = _check_index
     g._check_value = _check_value

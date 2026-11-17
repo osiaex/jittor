@@ -337,17 +337,17 @@ class device:
     # meta tensors in jittor, but we can make the *meta* context observable: push
     # it on a thread-local stack so Var.device reports "meta" inside it. Tensors
     # are still really allocated (harmless -- real weights get loaded over them),
-    # but transformers correctly skips the eager init. A meta block therefore
-    # does not join the default-device stack.
+    # but transformers correctly skips the eager init. Meta participates in
+    # the default-device stack so nested explicit contexts retain their order.
     # An *indexed* CUDA device context is not a no-op any more: torch's
     # `with torch.device("cuda:1"):` makes device 1 the default new tensors
     # are built on, and jittor now has a current device that means exactly
     # that. A bare "cuda" still names the current device, so it stays a no-op.
     def __enter__(self):
+        _default_device_stack().append(self)
         if self.type == "meta":
             _DEVICE_CTX_STACK.append(self)
             return self
-        _default_device_stack().append(self)
         if self.type in ("cuda", "npu") and self.index is not None:
             try:
                 self._prev_index = int(jt.current_device())
@@ -360,13 +360,12 @@ class device:
         return self
 
     def __exit__(self, *exc):
+        stack = _default_device_stack()
+        if stack and stack[-1] is self:
+            stack.pop()
         if self.type == "meta":
             if _DEVICE_CTX_STACK and _DEVICE_CTX_STACK[-1] is self:
                 _DEVICE_CTX_STACK.pop()
-        else:
-            stack = _default_device_stack()
-            if stack and stack[-1] is self:
-                stack.pop()
         prev = getattr(self, "_prev_index", None)
         if prev is not None and prev >= 0:
             try:

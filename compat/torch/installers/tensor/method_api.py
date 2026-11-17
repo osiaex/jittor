@@ -687,8 +687,10 @@ def _device(self):
     # Inside a `with torch.device("meta")` block (transformers'
     # from_pretrained), report "meta" so its meta-context detection
     # fires and eager weight init is skipped. See device.__enter__.
-    if _owner._DEVICE_CTX_STACK:
-        return _owner._DEVICE_CTX_STACK[-1]
+    from ...types import active_device_context
+    context = active_device_context()
+    if context is not None and context.type == "meta":
+        return context
     # Report the Var's ACTUAL memory residency (matches jtorch's C++
     # is_cpu()/device()): a Var built/migrated to host -- e.g. via
     # torch.zeros(device='cpu') or .cpu() -- is "cpu" even while the
@@ -876,6 +878,25 @@ def _data_set(self, value):
 
 
 
+def _is_torch_meta_var(value):
+    if not getattr(value, "_jittor_torch_meta", False):
+        return False
+    torch_var = get_install_context(_owner.jt).target_namespace.Var
+    return isinstance(value, torch_var)
+
+
+def _propagate_torch_meta(source, result):
+    if not _is_torch_meta_var(source) or result is NotImplemented:
+        return result
+    if not isinstance(result, _NativeVar):
+        raise RuntimeError("meta operation returned a non-tensor")
+    try:
+        result._jittor_torch_meta = True
+    except (AttributeError, TypeError) as exc:
+        raise RuntimeError("failed to propagate a meta tensor mark") from exc
+    return result
+
+
 def _to(self, *args, **kwargs):
     ds = None
     dev = None
@@ -951,6 +972,9 @@ def _to(self, *args, **kwargs):
                     "reporting that the move to %r succeeded" % (a,),
                     "This layer places tensors on cpu, cuda and npu only.",
                     stub_result=None)
+    if _is_torch_meta_var(self) and dev is not None and (
+            _owner._device_is_cpu(dev) or _owner._device_is_cuda(dev)):
+        raise NotImplementedError("cannot copy out of a meta tensor")
     if dev is None:
         dev = self.device
     out = self.clone() if copy else self
@@ -974,7 +998,7 @@ def _to(self, *args, **kwargs):
         out = moved
     if getattr(self, "_torch_0d", False):
         out._torch_0d = True
-    return out
+    return _propagate_torch_meta(self, out)
 
 
 
@@ -1895,11 +1919,12 @@ def _api_pow(self, exponent):
 
 
 def _tensor_rpow(self, other):
+    source = self
     if _preserve_autocast_arithmetic():
         self, other = _cuda_autocast_fp32_input(self), _cuda_autocast_fp32_input(other)
         with _owner.jt.flag_scope(amp_reg=0):
-            return _promoting_binary(self, other, '__rpow__', True)
-    return _promoting_binary(self, other, '__rpow__', True)
+            return _propagate_torch_meta(source, _promoting_binary(self, other, '__rpow__', True))
+    return _propagate_torch_meta(source, _promoting_binary(self, other, '__rpow__', True))
 
 
 def _tensor_truediv(self, other):
@@ -1907,8 +1932,8 @@ def _tensor_truediv(self, other):
     if fast is not None and not _autocast_state.order:
         out = fast(self, other, 6)
         if out is not None:
-            return out
-    return _true_division(self, other, '__truediv__')
+            return _propagate_torch_meta(self, out)
+    return _propagate_torch_meta(self, _true_division(self, other, '__truediv__'))
 
 
 def _tensor_rtruediv(self, other):
@@ -1916,8 +1941,8 @@ def _tensor_rtruediv(self, other):
     if fast is not None and not _autocast_state.order:
         out = fast(self, other, 7)
         if out is not None:
-            return out
-    return _true_division(self, other, '__rtruediv__')
+            return _propagate_torch_meta(self, out)
+    return _propagate_torch_meta(self, _true_division(self, other, '__rtruediv__'))
 
 
 def _tensor_eq(self, other):

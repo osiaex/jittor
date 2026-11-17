@@ -80,6 +80,16 @@ class TestCrossEntropyMatchesTheClosedForm(unittest.TestCase):
         rng = np.random.RandomState(0)
         self._check(rng.randn(33, 17).astype("float32"), rng.randint(0, 17, 33))
 
+    def test_large_row_offsets_preserve_loss_and_gradient(self):
+        logits = np.array([[1e8, 1e8, 1e8, 1e8],
+                           [-1e8, -1e8, -1e8, -1e8],
+                           [1e8, -1e8, 1e8, -1e8]], dtype=np.float32)
+        for reduction in ("none", "sum", "mean"):
+            self._check(logits, np.array([0, 1, 2]), reduction=reduction)
+            self._check(logits, np.array([0, -100, 2]),
+                        weight=np.array([1., 3., 2., 0.], dtype=np.float32),
+                        ignore_index=-100, reduction=reduction)
+
     def test_ignore_index_and_out_of_range_targets(self):
         rng = np.random.RandomState(1)
         target = rng.randint(0, 17, 33)

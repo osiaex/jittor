@@ -70,12 +70,53 @@ def _to_tensor(pic):
         arr = arr.transpose(2, 0, 1)
     return _jt.array(arr.copy())
 
+def _antialias_weights(ni, no, mode):
+    import numpy as np
+    scale = np.float32(ni / no)
+    factor = np.float32(max(float(scale), 1.))
+    center = (np.arange(no, dtype=np.float32) + np.float32(.5)) * scale
+    x = np.abs(((np.arange(ni, dtype=np.float32)[None, :] + np.float32(.5)) - center[:, None]) / factor)
+    if mode == "bilinear":
+        weights = np.maximum(np.float32(1) - x, np.float32(0))
+    else:
+        a = np.float32(-.5)
+        weights = np.where(x < 1, ((a + 2) * x - (a + 3)) * x * x + 1,
+                           np.where(x < 2, ((a*x - 5*a)*x + 8*a)*x - 4*a, 0)).astype(np.float32)
+    return np.ascontiguousarray(weights / weights.sum(axis=1, keepdims=True))
+
+
+def _antialias_resize(x, size, mode):
+    # Bounded dense separable reference implementation; preserves autograd.
+    n, c, h, w = map(int, x.shape)
+    oh, ow = map(int, size)
+    weight_elements = h * oh + w * ow
+    operations = n * c * (w * h * oh + oh * w * ow)
+    if weight_elements > 8_000_000 or operations > 1_000_000_000:
+        raise NotImplementedError("antialias resize exceeds bounded dense implementation")
+    wh = _jt.array(_antialias_weights(h, oh, mode))
+    ww = _jt.array(_antialias_weights(w, ow, mode))
+    z = x.permute(0, 1, 3, 2).reshape((-1, h)).matmul(wh.transpose(1, 0))
+    z = z.reshape((n, c, w, oh)).permute(0, 1, 3, 2)
+    return z.reshape((-1, w)).matmul(ww.transpose(1, 0)).reshape((n, c, oh, ow))
+
+
 def _resize(img, size, interpolation="bilinear", antialias=True, **k):
     # img: CHW (or NCHW) Var. size: int or (h,w). Route through jittor interpolate.
     interp = getattr(interpolation, "value", interpolation)
+    if isinstance(interp, int):
+        try:
+            interp = {0: "nearest", 1: "lanczos", 2: "bilinear", 3: "bicubic",
+                      4: "box", 5: "hamming"}[interp]
+        except KeyError:
+            raise ValueError(f"unsupported interpolation value: {interp}") from None
     interp = str(interp).lower()
-    mode = {"bilinear": "bilinear", "bicubic": "bicubic", "nearest": "nearest",
-            "nearest_exact": "nearest", "box": "area"}.get(interp, "bilinear")
+    if interp in ("lanczos", "box", "hamming"):
+        raise NotImplementedError(f"tensor interpolation mode is unsupported: {interp}")
+    try:
+        mode = {"bilinear": "bilinear", "bicubic": "bicubic", "nearest": "nearest",
+                "nearest_exact": "nearest-exact", "nearest-exact": "nearest-exact"}[interp]
+    except KeyError:
+        raise ValueError(f"unsupported interpolation value: {interpolation}") from None
     if isinstance(size, int):
         # torchvision: scale shorter side to `size`, keep aspect
         c, h, w = img.shape[-3], img.shape[-2], img.shape[-1]
@@ -91,12 +132,20 @@ def _resize(img, size, interpolation="bilinear", antialias=True, **k):
     was_uint8 = "uint8" in _jittor_dtype_name(x.dtype)
     xf = x.float32()
     align = False if mode in ("bilinear", "bicubic") else None
-    try:
+    if antialias and mode in ("bilinear", "bicubic"):
+        from jittor._core.dtypes import var_dtype_name
+        if var_dtype_name(x) not in ("uint8", "float32"):
+            raise NotImplementedError("antialias resize currently supports only uint8 and float32")
+        dev = getattr(img.device, "type", img.device)
+        kind = str(dev).split(":", 1)[0]
+        if kind not in ("cpu", "cuda"):
+            raise NotImplementedError(f"unsupported antialias resize device: {dev}")
+        with _jt.flag_scope(use_cuda=int(kind == "cuda")):
+            y = _antialias_resize(xf, (nh, nw), mode)
+    else:
         y = _nn.interpolate(xf, size=(nh, nw), mode=mode,
                             align_corners=align) if align is not None \
             else _nn.interpolate(xf, size=(nh, nw), mode=mode)
-    except Exception:
-        y = _nn.interpolate(xf, size=(nh, nw), mode="bilinear", align_corners=False)
     if was_uint8:
         y = y.round().clamp(0, 255).uint8()
     if img.ndim == 3:

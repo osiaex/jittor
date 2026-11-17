@@ -248,8 +248,22 @@ def clip_grad_norm_(parameters, max_norm, norm_type=2.0,
                     error_if_nonfinite=False, **k):
     if isinstance(parameters, _jt.Var):
         parameters = [parameters]
-    parameters = list(parameters)
+    else:
+        is_generator = isinstance(parameters, _types_nn_private.GeneratorType)
+        parameters = list(parameters)
+        if is_generator and not parameters:
+            import warnings
+            warnings.warn(
+                "`parameters` is an empty generator, no gradient clipping will occur.",
+                stacklevel=2)
     grads = _grads_of(parameters)
+    if not grads:
+        # Match get_total_norm then clip_grads_with_norm: order conversion,
+        # default-device/default-dtype scalar, then max_norm conversion.
+        float(norm_type)
+        result = get_install_context(jt).target_namespace.tensor(0.0)
+        float(max_norm)
+        return result
     return _clip_grad_norm_device(
         grads, max_norm, norm_type, error_if_nonfinite,
         shard_reduce=_parameters_are_sharded(parameters))

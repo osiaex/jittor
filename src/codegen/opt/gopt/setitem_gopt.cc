@@ -65,7 +65,7 @@ static void setitem_inplace(SetitemOp* op) {
     auto output = op->outputs().front();
     // return if output is all ready shared
     if (output->allocator || output->is_sharing()) return;
-    output->share_with(input);
+    output->share_allocation_with(input);
     
     auto data = op->input(1);
     // if setitem requires type conversion, don't inplace
@@ -144,7 +144,7 @@ static void setitem_inplace(SetitemOp* op) {
         return;
     }
     add_dependency(data->input(), input->node());
-    data->share_with(input, size);
+    data->share_allocation_with(input, size);
     op->ns.set(GetitemOp::_inplace);
     // LOGir << input->shape << input->dtype() << data->shape << data->dtype() << vs << data->input();
     // LOGir << output;

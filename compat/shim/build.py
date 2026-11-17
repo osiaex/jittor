@@ -351,6 +351,10 @@ def build_extension_dirs(
             _log(verbose, "skip native extension without setup.py: %s" % ext.root)
             continue
         child_env = (env or os.environ.copy()).copy()
+        # setup.py can import torch while building the extension. Its shim
+        # activation must not recursively discover and build the same projects.
+        # Keep the marker local to this child; never alter the parent process.
+        child_env["JITTOR_TORCH_EXT_BUILD_CHILD"] = "1"
         ext_root = pathlib.Path(ext.root).resolve()
         build_temp_path, build_lib_path = _setuptools_build_dirs(ext_root, child_env)
         build_root = _setuptools_build_root(ext_root, child_env)

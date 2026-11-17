@@ -480,9 +480,9 @@ static bool releases_pending(Op* op, FusedOp& fused, const vector<Var*>& last_us
 // release_kept_storage asks it. Otherwise nothing may keep it pending -- a
 // holder, a consumer outside the segment, a reader in it that will run again:
 // its pending count is one per edge from the segment, plus the batch's own
-// hold if this is its last use -- and then one of:
-//  - backward does not need it: the pending release frees the memory;
-//  - it cannot be recomputed (forward-dead): the node itself is freed.
+// hold if this is its last use. Releasing the last pending read frees memory
+// only if backward does not need the value. Forward-dead values can still
+// keep their storage for backward after their producer is released.
 // Anything the backward keeps alive stays out, even where its backward
 // liveness looks spent: the output of a `jt.Function` -- a loss through the
 // full-reduce fast path -- reads that way and is not.
@@ -501,7 +501,7 @@ static bool dies_after(Var* v, FusedOp& fused, const vector<Var*>& last_used,
     }
     int hold = last_use;
     if (v->liveness.pending.count() != edges + hold) return false;
-    return !v->flag(VarFlags::_needed_by_backward) || !v->liveness.forward.active();
+    return !v->flag(VarFlags::_needed_by_backward);
 }
 
 // Whether the kernel reads every element of `v` only in the iteration that

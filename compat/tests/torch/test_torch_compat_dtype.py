@@ -153,6 +153,31 @@ class TestConstructorDtype(Base):
                     np.full((2, 2), 5, "float64"), dev)
         both_devices(body)
 
+    def test_full_infers_integer_and_boolean_fill_dtype(self):
+        def body(dev):
+            values = torch.full(size=(1, 729), fill_value=0, device=dev)
+            self.assertEqual(dts(values), "int64")
+            self.ae(values.cpu().numpy(), np.zeros((1, 729), dtype=np.int64), dev)
+            boolean = torch.full((2,), True, dtype=None, device=dev)
+            self.assertEqual(dts(boolean), "bool")
+            self.ae(boolean.cpu().numpy(), np.ones(2, dtype=np.bool_), dev)
+            self.assertEqual(dts(torch.full((2,), 1, dtype=torch.float32, device=dev)), "float32")
+        both_devices(body)
+
+    def test_cuda_arange_preserves_float_position_buckets(self):
+        if "cuda" not in jt.core.registered_backends():
+            self.skipTest("NVIDIA CUDA required")
+        step = 1 / 27
+        boundaries = torch.arange(step, 1.0, step, device="cuda")
+        coordinates = torch.arange(27, dtype=torch.float32, device="cuda") * step
+        expected = (np.arange(27, dtype=np.float64) * float(np.float32(step)) +
+                    float(np.float32(step))).astype(np.float32)
+        self.ae(boundaries.cpu().numpy(), expected)
+        self.ae(torch.bucketize(coordinates, boundaries, right=True).cpu().numpy(), np.arange(27))
+        self.ae(torch.arange(start=3., end=0., step=-.5, device="cuda").cpu().numpy(),
+                np.array([3., 2.5, 2., 1.5, 1., .5], dtype=np.float32))
+        self.assertEqual(torch.arange(1., 1., device="cuda").numel(), 0)
+
     def test_empty_dtype_shape(self):
         # empty: contents undefined, but dtype + shape must match the request.
         def body(dev):

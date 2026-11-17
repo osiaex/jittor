@@ -294,6 +294,15 @@ def make_tensor_type(backend):
     })
 
 
+def _propagate_clone_meta(source, result, torch_var):
+    if isinstance(source, torch_var) and getattr(source, "_jittor_torch_meta", False):
+        try:
+            result._jittor_torch_meta = True
+        except (AttributeError, TypeError) as exc:
+            raise RuntimeError("failed to propagate a meta tensor mark") from exc
+    return result
+
+
 def clone(input, *, memory_format=None):
     """Copy Tensor storage through the native copy op, preserving gradients."""
     import jittor as backend
@@ -310,8 +319,9 @@ def clone(input, *, memory_format=None):
                 result = backend.Var.copy(input, memory_format != "contiguous_format")
                 result.sync()
                 setattr(result, "_jittor_torch_force_cpu", True)
-            return result
-        return backend.Var.copy(input, memory_format != "contiguous_format")
+            return _propagate_clone_meta(input, result, target.Var)
+        result = backend.Var.copy(input, memory_format != "contiguous_format")
+        return _propagate_clone_meta(input, result, target.Var)
 
 
 def tensor_make_subclass(cls, data, requires_grad=False):

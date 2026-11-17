@@ -212,6 +212,25 @@ class TestLog1pSoftplusNative(unittest.TestCase):
                 np.testing.assert_allclose(self._snapshot(y, device), expected, rtol=2e-6, atol=2e-6)
                 np.testing.assert_allclose(self._snapshot(gradient, device), expected_gradient, rtol=2e-6, atol=2e-6)
 
+    def test_cuda_autocast_softplus_preserves_float32_opmath(self):
+        with self._scope("cuda"):
+            torch = self.torch
+            functional = torch.nn.functional
+            source = np.array([-30., -1.375, -.1875, .625, 2.75, 16.], dtype=np.float32)
+            for dtype in (torch.float32, torch.bfloat16, torch.float16):
+                with self.subTest(dtype=dtype):
+                    x = torch.tensor(source, dtype=dtype, device="cuda", requires_grad=True)
+                    with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+                        output = functional.softplus(x, beta=.75, threshold=10.)
+                    self.assertEqual(output.dtype, torch.float32)
+                    gradient, = torch.autograd.grad(output.sum(), (x,))
+                    self.assertEqual(gradient.dtype, dtype)
+                    expected, derivative = softplus_reference(source, .75, 10.)
+                    rounded = torch.tensor(derivative, dtype=dtype, device="cuda").float()
+                    self._numeric(self._snapshot(output, "cuda"), expected, 2e-6, 0.)
+                    self._numeric(self._snapshot(gradient.float(), "cuda"),
+                                  self._snapshot(rounded, "cuda"), 2e-6, 0.)
+
     def test_cpu_complex(self):
         self._check_complex("cpu")
 

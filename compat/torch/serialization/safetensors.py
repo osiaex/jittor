@@ -2,6 +2,7 @@
 import json
 import os
 import struct
+import threading
 from types import MappingProxyType
 import numpy as np
 import jittor as jt
@@ -55,11 +56,19 @@ def _to_tensor(array, st_dtype, device):
 
 
 class _PySafeSlice:
-    def __init__(self, raw, st_dtype, shape, device="cpu"):
-        self._raw = raw
+    def __init__(self, source, key, st_dtype, shape, device="cpu"):
+        # The source keeps one descriptor per open archive, not one per slice.
+        source._acquire_slice()
+        self._source = source
+        self._key = key
         self._dtype = st_dtype
         self._shape = shape
         self._device = device
+
+    def __del__(self):
+        source = getattr(self, "_source", None)
+        if source is not None:
+            source._release_slice()
 
     def get_shape(self):
         return list(self._shape)
@@ -68,10 +77,11 @@ class _PySafeSlice:
         return self._dtype
 
     def __getitem__(self, idx):
-        arr = _bytes_to_np(self._raw, self._dtype, self._shape)
+        st_dtype, shape, raw = self._source._entry(self._key)
+        arr = _bytes_to_np(raw, st_dtype, shape)
         if idx is not Ellipsis:
             arr = arr[idx]
-        return _to_tensor(arr, self._dtype, self._device)
+        return _to_tensor(arr, st_dtype, self._device)
 
 
 def _header_error(message):
@@ -124,15 +134,35 @@ class _PySafeOpen:
     def __init__(self, filename, framework="pt", device="cpu", backend="mmap"):
         self._filename = filename
         self._device = device
-        with open(filename, "rb") as fh:
-            size = os.fstat(fh.fileno()).st_size
-            self._header, n = _parse_header(fh.read(8), fh.read, size)
-        # Tensors are read on demand, as safetensors' mmap reader does: holding
-        # the whole payload doubled peak host memory while a checkpoint loaded.
+        self._file = open(filename, "rb")
+        self._lock = threading.Lock()
+        self._context_exited = False
+        self._active_slices = 0
+        try:
+            size = os.fstat(self._file.fileno()).st_size
+            self._header, n = _parse_header(self._file.read(8), self._file.read, size)
+        except BaseException:
+            self._file.close()
+            raise
         self._data_offset = 8 + n
-        # Absence differs from an explicitly empty metadata dictionary.
-        # Accelerate uses None to recognize an archive without a format tag.
         self._meta = self._header.pop("__metadata__", None)
+
+    def __del__(self):
+        file = getattr(self, "_file", None)
+        if file is not None:
+            file.close()
+
+    def _acquire_slice(self):
+        with self._lock:
+            if self._context_exited:
+                raise ValueError("I/O operation on closed safetensors context")
+            self._active_slices += 1
+
+    def _release_slice(self):
+        with self._lock:
+            self._active_slices -= 1
+            if self._context_exited and self._active_slices == 0:
+                self._file.close()
 
     def keys(self):
         return list(self._header.keys())
@@ -143,9 +173,10 @@ class _PySafeOpen:
     def _entry(self, key):
         entry = self._header[key]
         start, end = entry["data_offsets"]
-        with open(self._filename, "rb") as fh:
-            fh.seek(self._data_offset + start)
-            raw = fh.read(end - start)
+        # Serialize seek/read on the shared descriptor for concurrent readers.
+        with self._lock:
+            self._file.seek(self._data_offset + start)
+            raw = self._file.read(end - start)
         if len(raw) != end - start:
             # The header was checked against the file at open; it shrank since.
             raise EOFError("short safetensors payload for %r: expected %d bytes, got %d"
@@ -153,8 +184,8 @@ class _PySafeOpen:
         return entry["dtype"], entry["shape"], raw
 
     def get_slice(self, key):
-        st_dtype, shape, raw = self._entry(key)
-        return _PySafeSlice(raw, st_dtype, shape, self._device)
+        entry = self._header[key]
+        return _PySafeSlice(self, key, entry["dtype"], entry["shape"], self._device)
 
     def get_tensor(self, key):
         st_dtype, shape, raw = self._entry(key)
@@ -167,6 +198,10 @@ class _PySafeOpen:
         return self
 
     def __exit__(self, *args):
+        with self._lock:
+            self._context_exited = True
+            if self._active_slices == 0:
+                self._file.close()
         return False
 
 

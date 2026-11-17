@@ -1,3 +1,6 @@
+from jittor.nn.functional.activation import silu as _native_silu
+from jittor.nn.functional.activation import softplus as _native_softplus
+from ...amp import _autocast_fp32_call, autocast_is_enabled
 from jittor.nn.functional.loss import _checked_class_target
 from ...fidelity import Fidelity, register_api_bindings
 from jittor._core.dtypes import dtype_name as _jittor_dtype_name
@@ -95,6 +98,25 @@ def _log_softmax(input, dim=None, _stacklevel=3, dtype=None):
     if dtype is not None:
         input = input.cast(_dtype_to_str(dtype))
     return _jt_log_softmax(input, dim=dim)
+
+
+def _silu(input, inplace=False):
+    # SiLU preserves the input dtype in CUDA autocast. In particular, an
+    # explicit float32 input must also keep float32 sigmoid opmath.
+    if (autocast_is_enabled("cuda") and input.device.type == "cuda"
+            and _jittor_dtype_name(input.dtype) == "float32"):
+        return _autocast_fp32_call(_native_silu, input, inplace=inplace, eligible=False)
+    return _native_silu(input, inplace=inplace)
+
+
+def _silu_execute(self, input):
+    return _silu(input, *self.args, **self.kw)
+
+
+def _softplus(input, beta=1, threshold=20):
+    if autocast_is_enabled("cuda") and input.device.type == "cuda":
+        return _autocast_fp32_call(_native_softplus, input, beta=beta, threshold=threshold)
+    return _native_softplus(input, beta=beta, threshold=threshold)
 
 
 def _interpolate(input=None, size=None, scale_factor=None,
@@ -280,6 +302,10 @@ def _install_functional(ctx):
     if hasattr(nn, "log_softmax"):
         _jt_log_softmax = nn.log_softmax
         F.log_softmax = _log_softmax
+    F.silu = _silu
+    if getattr(nn.SiLU, "_torch_native_layer", None) is jt.nn.SiLU:
+        nn.SiLU.execute = _silu_execute
+    F.softplus = _softplus
     if hasattr(nn, "linear"): F.linear = nn.linear
     if hasattr(nn, "interpolate"):
         # torch.nn.functional.interpolate defaults to mode='nearest', but

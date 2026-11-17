@@ -19,6 +19,24 @@ class _NestedSiLU(torch.nn.Module):
 
 
 class TestNestedSiLU(cu.JittorTestCase):
+    def test_fp32_cuda_autocast_preserves_silu_forward_and_gradient(self, device):
+        if str(device).split(":")[0] != "cuda":
+            self.skipTest("CUDA autocast precision")
+        source = np.array([-6., -3.125, -1.3125, -.171875, .625, 1.6875, 4.], dtype=np.float32)
+        sigmoid = 1. / (1. + np.exp(-source.astype(np.float64)))
+        expected = source * sigmoid
+        derivative = sigmoid * (1. + source * (1. - sigmoid))
+        with forbid_backend_fallbacks():
+            for amp_dtype in (torch.float16, torch.bfloat16):
+                for operation in (torch.nn.functional.silu, _NestedSiLU().to(device)):
+                    x = torch.tensor(source, dtype=torch.float32, device=device, requires_grad=True)
+                    with torch.autocast(device, dtype=amp_dtype):
+                        y = operation(x)
+                    self.assertEqual(str(y.dtype), str(torch.float32))
+                    gradient, = torch.autograd.grad(y.sum(), (x,))
+                    np.testing.assert_allclose(y.detach().cpu().numpy(), expected, atol=1e-7, rtol=2e-6)
+                    np.testing.assert_allclose(gradient.detach().cpu().numpy(), derivative, atol=1e-7, rtol=2e-6)
+
     def test_first_and_warm_calls_keep_functional_opmath(self, device):
         rng = np.random.RandomState(17831)
         shape = (2, 4, 17)
